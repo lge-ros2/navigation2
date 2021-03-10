@@ -23,6 +23,24 @@ from launch_ros.actions import Node
 from nav2_common.launch import RewrittenYaml
 
 
+def get_initial_pose_from_env():
+    set_initial_pose = False
+    initial_pose_x = '0.0'
+    initial_pose_y = '0.0'
+    initial_pose_yaw = '0.0'
+    if 'INITIAL_POSE_X' in os.environ.keys():
+        set_initial_pose = True
+        initial_pose_x = os.environ['INITIAL_POSE_X']
+    if 'INITIAL_POSE_Y' in os.environ.keys():
+        set_initial_pose = True
+        initial_pose_y = os.environ['INITIAL_POSE_Y']
+    if 'INITIAL_POSE_YAW' in os.environ.keys():
+        set_initial_pose = True
+        initial_pose_yaw = os.environ['INITIAL_POSE_YAW']
+    result = [set_initial_pose, initial_pose_x, initial_pose_y, initial_pose_yaw]
+    return result
+
+
 def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory('nav2_bringup')
@@ -47,6 +65,18 @@ def generate_launch_description():
     param_substitutions = {
         'use_sim_time': use_sim_time,
         'yaml_filename': map_yaml_file}
+
+    initial_pose_env = get_initial_pose_from_env()
+    if initial_pose_env[0]:
+        print('get_initial_pose_from_env initial_pose_env True')
+        set_initial_pose = LaunchConfiguration('set_initial_pose', default='true')
+        initial_pose_x = LaunchConfiguration('x', default=initial_pose_env[1])
+        initial_pose_y = LaunchConfiguration('y', default=initial_pose_env[2])
+        initial_pose_yaw = LaunchConfiguration('yaw', default=initial_pose_env[3])
+        param_substitutions['set_initial_pose'] = set_initial_pose
+        param_substitutions['x'] = initial_pose_x
+        param_substitutions['y'] = initial_pose_y
+        param_substitutions['yaw'] = initial_pose_yaw
 
     configured_params = RewrittenYaml(
         source_file=params_file,
