@@ -31,24 +31,20 @@ colcon build --symlink-install
 ## Terminal 1: Launch CLOiSim world with robot name 'cloi'
 Example: See [CLOiSim](https://github.com/lge-ros2/cloisim) for details
 
-## Terminal 2: Launch sim_device driver_sim with robot name 'cloi'
-```bash
-ros2 launch sim_device_bringup driver_sim.launch.py robot_name:=cloi
-```
-See [sim_device](https://github.com/lge-ros2/sim_device) for details
+## Terminal 2: Run cloisim_ros 
 
-## Terminal 3: Launch sim_device world_sim
-```bash
-ros2 launch sim_device_bringup world_sim.launch.py
-```
-See [sim_device](https://github.com/lge-ros2/sim_device) for details
+Example: See [cloisim_ros](https://github.com/lge-ros2/cloisim_ros/tree/foxy) for details
 
-## Terminal 4: Launch navigation with params
+```bash
+ros2 run cloisim_ros_bringup cloisim_ros_bringup
+```
+
+## Terminal 3: Launch navigation with params
 ```bash
 ros2 launch nav2_bringup bringup_launch.py use_namespace:=true namespace:=cloi use_sim_time:=true map:=/home/zikprid/work/cloi_ws/seocho_tower_B1F.yaml
 ```
 
-## Terminal 5: Launch rviz
+## Terminal 4: Launch rviz
 ```bash
 ros2 launch nav2_bringup rviz_launch.py use_namespace:=true namespace:=cloi rviz_config:=../src/navigation2/nav2_bringup/bringup/rviz/nav2_cloi.rviz
 ```
