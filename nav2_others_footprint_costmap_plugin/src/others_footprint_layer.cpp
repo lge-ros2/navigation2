@@ -41,15 +41,11 @@ void OthersFootprintLayer::onInitialize()
     if(device_id_ == "cloi2") {
       return;
     }
-    std::cout << "1111111111111111111111111"<< std::endl;
     std::string frame_id = msg->header.frame_id;
     if(frame_id != device_id_ && frame_id != "") {
-      std::cout << "2222222222222222222222222"<< std::endl;
       if(footprint_map_.find(frame_id) != footprint_map_.end()) {
-        std::cout << "333333333333333333333333"<< std::endl;
         footprint_map_[frame_id] = msg;
       } else {
-        std::cout << "4444444444444444444444444 frame_id: "<< frame_id << std::endl;
         footprint_map_.insert(make_pair(frame_id, msg));
       }
     }
@@ -87,28 +83,19 @@ void OthersFootprintLayer::updateCosts(
   nav2_costmap_2d::Costmap2D & master_grid, 
   int /* min_i */, int /* min_j */, int /* max_i */, int /* max_j */)
 {
-  std::cout << "555555555555555555555555555"<< std::endl;
   if (!enabled_) {
     return;
   }
   unsigned char * master_array = master_grid.getCharMap();
   auto system_clock = node_->get_clock();
   bool ros_time_is_active = system_clock->ros_time_is_active();
-  if(ros_time_is_active) {
-    std::cout << "aaaaaaaaaaaaaaaaaaaaa"<< std::endl;
-  } else {
-    std::cout << "bbbbbbbbbbbbbbbbbbbbbbbbb"<< std::endl;
-  }
   rclcpp::Time system_now = system_clock->now();
-  std::cout << "66666666666666666666666 system_now: "<< system_now.seconds()<< std::endl;
   rclcpp::Duration tolerance_duration = rclcpp::Duration(time_tolerance_, 0);
   for(auto it=footprint_map_.begin(); it!=footprint_map_.end(); ++it) {
     geometry_msgs::msg::PolygonStamped::SharedPtr footprint = it->second;
     rclcpp::Time msg_time = footprint->header.stamp;
     rclcpp::Duration time_sub = system_now - msg_time;
-    std::cout << "7777777777777777777777777777"<< msg_time.seconds()<< std::endl;
     if(time_sub < tolerance_duration) {
-      std::cout << "888888888888888888888888888"<< std::endl;
       for(unsigned int point_index = 0; point_index < footprint->polygon.points.size(); point_index++) {
         double wx = (double)footprint->polygon.points[point_index].x;
         double wy = (double)footprint->polygon.points[point_index].y;
