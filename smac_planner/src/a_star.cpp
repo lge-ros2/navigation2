@@ -352,7 +352,7 @@ AStarAlgorithm<NodeSE2>::NodePtr AStarAlgorithm<NodeSE2>::getAnalyticPath(
   float d = node->motion_table.state_space->distance(from(), to());
   NodePtr prev(node);
   // A move of sqrt(2) is guaranteed to be in a new cell
-  constexpr float sqrt_2 = std::sqrt(2.);
+  static const float sqrt_2 = std::sqrt(2.);
   unsigned int num_intervals = std::floor(d / sqrt_2);
 
   using PossibleNode = std::pair<NodePtr, Coordinates>;
@@ -411,10 +411,20 @@ AStarAlgorithm<NodeSE2>::NodePtr AStarAlgorithm<NodeSE2>::getAnalyticPath(
   prev = node;
   for (const auto & node_pose : possible_nodes) {
     const auto & n = node_pose.first;
-    n->parent = prev;
-    prev = n;
+    if (!n->wasVisited() && n->getIndex() != _goal->getIndex()) {
+      // Make sure this node has not been visited by the regular algorithm.
+      // If it has been, there is the (slight) chance that it is in the path we are expanding
+      // from, so we should skip it.
+      // Skipping to the next node will still create a kinematically feasible path.
+      n->parent = prev;
+      n->visited();
+      prev = n;
+    }
   }
-  _goal->parent = prev;
+  if (_goal != prev) {
+    _goal->parent = prev;
+    _goal->visited();
+  }
   return _goal;
 }
 

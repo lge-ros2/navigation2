@@ -36,11 +36,11 @@ public:
     const BT::NodeConfiguration & conf)
   : BT::ActionNodeBase(xml_tag_name, conf), action_name_(action_name)
   {
-    node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
+    node_ = config().blackboard->template get<rclcpp::Node::SharedPtr>("node");
 
     // Get the required items from the blackboard
     server_timeout_ =
-      config().blackboard->get<std::chrono::milliseconds>("server_timeout");
+      config().blackboard->template get<std::chrono::milliseconds>("server_timeout");
     getInput<std::chrono::milliseconds>("server_timeout", server_timeout_);
 
     // Initialize the input and output messages
@@ -231,7 +231,7 @@ protected:
     auto future_goal_handle = action_client_->async_send_goal(goal_, send_goal_options);
 
     if (rclcpp::spin_until_future_complete(node_, future_goal_handle, server_timeout_) !=
-      rclcpp::executor::FutureReturnCode::SUCCESS)
+      rclcpp::FutureReturnCode::SUCCESS)
     {
       throw std::runtime_error("send_goal failed");
     }
@@ -245,9 +245,9 @@ protected:
   void increment_recovery_count()
   {
     int recovery_count = 0;
-    config().blackboard->get<int>("number_recoveries", recovery_count);  // NOLINT
+    config().blackboard->template get<int>("number_recoveries", recovery_count);  // NOLINT
     recovery_count += 1;
-    config().blackboard->set<int>("number_recoveries", recovery_count);  // NOLINT
+    config().blackboard->template set<int>("number_recoveries", recovery_count);  // NOLINT
   }
 
   std::string action_name_;
