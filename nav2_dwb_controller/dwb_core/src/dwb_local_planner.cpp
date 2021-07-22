@@ -439,6 +439,12 @@ DWBLocalPlanner::coreScoringAlgorithm(
     throw NoLegalTrajectoriesException(tracker);
   }
 
+  if (abs(best.traj.velocity.x)<0.001 && abs(best.traj.velocity.theta)<0.001) {
+    best.traj.velocity.theta = 0.1;
+  } else {
+    best.traj.velocity.x = std::min(best.traj.velocity.x, 0.8/abs(best.traj.velocity.theta));
+  }
+
   return best;
 }
 

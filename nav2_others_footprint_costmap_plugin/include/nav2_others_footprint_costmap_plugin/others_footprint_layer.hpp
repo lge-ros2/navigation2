@@ -2,7 +2,7 @@
 #define NAV2_OTHERS_FOOTPRINT_LAYER_HPP_
 
 #include "rclcpp/rclcpp.hpp"
-#include "nav2_costmap_2d/layer.hpp"
+#include "nav2_costmap_2d/costmap_layer.hpp"
 #include "nav2_costmap_2d/layered_costmap.hpp"
 #include "geometry_msgs/msg/polygon_stamped.hpp"
 
@@ -10,7 +10,7 @@
 namespace nav2_others_footprint_costmap_plugin
 {
 
-class OthersFootprintLayer : public nav2_costmap_2d::Layer
+class OthersFootprintLayer : public nav2_costmap_2d::CostmapLayer
 {
 public:
   OthersFootprintLayer();
@@ -35,8 +35,9 @@ private:
   std::string device_id_;
   std::string topic_;
   double time_tolerance_;
+  std::vector<int> old_footprint_costmap_index_;
 
-  std::map<std::string, geometry_msgs::msg::PolygonStamped::SharedPtr> footprint_map_;
+  std::map<std::string, std::vector<geometry_msgs::msg::PolygonStamped::SharedPtr>> footprint_map_;
 
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr footprint_sub_;
 };

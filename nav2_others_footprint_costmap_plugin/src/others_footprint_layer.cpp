@@ -5,14 +5,14 @@
 #include "rclcpp/parameter_events_filter.hpp"
 
 using nav2_costmap_2d::LETHAL_OBSTACLE;
-using nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE;
-using nav2_costmap_2d::NO_INFORMATION;
+using nav2_costmap_2d::FREE_SPACE;
 
 namespace nav2_others_footprint_costmap_plugin
 {
 
 OthersFootprintLayer::OthersFootprintLayer()
 {
+  old_footprint_costmap_index_.clear();
 }
 
 void OthersFootprintLayer::onInitialize()
@@ -38,15 +38,29 @@ void OthersFootprintLayer::onInitialize()
   }
 
   auto callback = [this](const geometry_msgs::msg::PolygonStamped::SharedPtr msg) -> void {
-    if(device_id_ == "cloi2") {
-      return;
-    }
     std::string frame_id = msg->header.frame_id;
     if(frame_id != device_id_ && frame_id != "") {
       if(footprint_map_.find(frame_id) != footprint_map_.end()) {
-        footprint_map_[frame_id] = msg;
+        std::vector<geometry_msgs::msg::PolygonStamped::SharedPtr> msg_vector = footprint_map_[frame_id];
+        if(msg_vector.size() == 0) {
+          msg_vector.push_back(msg);
+          footprint_map_[frame_id] = msg_vector;
+        } else {
+          geometry_msgs::msg::PolygonStamped::SharedPtr old_msg = msg_vector[0];
+          if(old_msg->header.stamp.sec == msg->header.stamp.sec
+            && old_msg->header.stamp.nanosec == msg->header.stamp.nanosec) {
+            msg_vector.push_back(msg);
+            footprint_map_[frame_id] = msg_vector;
+          } else {
+            std::vector<geometry_msgs::msg::PolygonStamped::SharedPtr> new_msg_vector;
+            new_msg_vector.push_back(msg);
+            footprint_map_[frame_id] = new_msg_vector;
+          }
+        }
       } else {
-        footprint_map_.insert(make_pair(frame_id, msg));
+        std::vector<geometry_msgs::msg::PolygonStamped::SharedPtr> msg_vector;
+        msg_vector.push_back(msg);
+        footprint_map_.insert(make_pair(frame_id, msg_vector));
       }
     }
   };
@@ -55,27 +69,37 @@ void OthersFootprintLayer::onInitialize()
     rclcpp::SensorDataQoS(),
     callback);
 
-  RCLCPP_INFO(rclcpp::get_logger(
-    "nav2_costmap_2d"), "OthersFootprintLayer enabled: %d",
+  RCLCPP_INFO(rclcpp::get_logger("nav2_costmap_2d"), 
+    "OthersFootprintLayer enabled: %d",
     enabled_);
-  RCLCPP_INFO(rclcpp::get_logger(
-    "nav2_costmap_2d"), "OthersFootprintLayer topic: %s",
+  RCLCPP_INFO(rclcpp::get_logger("nav2_costmap_2d"), 
+    "OthersFootprintLayer topic: %s",
     topic_.c_str());
-  RCLCPP_INFO(rclcpp::get_logger(
-    "nav2_costmap_2d"), "OthersFootprintLayer time_tolerance: %f",
+  RCLCPP_INFO(rclcpp::get_logger("nav2_costmap_2d"), 
+    "OthersFootprintLayer time_tolerance: %f",
     time_tolerance_);
 }
 
 void OthersFootprintLayer::updateBounds(
   double /* robot_x */, double /* robot_y */, double /* robot_yaw */, 
-  double * /* min_x */, double * /* min_y */, double * /* max_x */, double * /* max_y */)
+  double *min_x, double *min_y, double *max_x, double *max_y)
 {
+  Costmap2D * master = layered_costmap_->getCostmap();
+  double wx, wy;
+  mapToWorld(0, 0, wx, wy);
+  *min_x = wx;
+  *min_y = wy;
+
+  mapToWorld(master->getSizeInCellsX(), master->getSizeInCellsY(), wx, wy);
+  *max_x = wx;
+  *max_y = wy;
+
 }
 
 void OthersFootprintLayer::onFootprintChanged()
 {
-  RCLCPP_DEBUG(rclcpp::get_logger(
-      "nav2_costmap_2d"), "OthersFootprintLayer::onFootprintChanged(): num footprint points: %lu",
+  RCLCPP_DEBUG(rclcpp::get_logger("nav2_costmap_2d"), 
+    "OthersFootprintLayer::onFootprintChanged(): num footprint points: %lu",
     layered_costmap_->getFootprint().size());
 }
 
@@ -86,27 +110,33 @@ void OthersFootprintLayer::updateCosts(
   if (!enabled_) {
     return;
   }
-  unsigned char * master_array = master_grid.getCharMap();
+  unsigned char * master_array = master_grid.getCharMap();  
+  // for(unsigned int idx = 0; idx<old_footprint_costmap_index_.size(); idx++) {
+  //   master_array[old_footprint_costmap_index_[idx]] = FREE_SPACE;
+  // }
   auto system_clock = node_->get_clock();
-  bool ros_time_is_active = system_clock->ros_time_is_active();
   rclcpp::Time system_now = system_clock->now();
   rclcpp::Duration tolerance_duration = rclcpp::Duration(time_tolerance_, 0);
+  old_footprint_costmap_index_.clear();
   for(auto it=footprint_map_.begin(); it!=footprint_map_.end(); ++it) {
-    geometry_msgs::msg::PolygonStamped::SharedPtr footprint = it->second;
-    rclcpp::Time msg_time = footprint->header.stamp;
-    rclcpp::Duration time_sub = system_now - msg_time;
-    if(time_sub < tolerance_duration) {
-      for(unsigned int point_index = 0; point_index < footprint->polygon.points.size(); point_index++) {
-        double wx = (double)footprint->polygon.points[point_index].x;
-        double wy = (double)footprint->polygon.points[point_index].y;
-        int mx, my;
-        master_grid.worldToMapNoBounds(wx, wy, mx, my);
-        int index = master_grid.getIndex(mx, my);
-        master_array[index] = LETHAL_OBSTACLE;
+    std::vector<geometry_msgs::msg::PolygonStamped::SharedPtr> footprints = it->second;
+    for(unsigned int vi = 0; vi < footprints.size(); vi++) {
+      auto footprint = footprints[vi];
+      rclcpp::Time msg_time = footprint->header.stamp;
+      rclcpp::Duration time_sub = system_now - msg_time;
+      if(time_sub < tolerance_duration) {
+        for(unsigned int point_index = 0; point_index < footprint->polygon.points.size(); point_index++) {
+          double wx = (double)footprint->polygon.points[point_index].x;
+          double wy = (double)footprint->polygon.points[point_index].y;
+          int mx, my;
+          master_grid.worldToMapNoBounds(wx, wy, mx, my);
+          int index = master_grid.getIndex(mx, my);
+          master_array[index] = LETHAL_OBSTACLE;
+          old_footprint_costmap_index_.push_back(index);
+        }
       }
     }
   }
-
 }
 
 }  // namespace nav2_others_footprint_costmap_plugin
