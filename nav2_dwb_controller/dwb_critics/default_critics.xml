@@ -38,5 +38,9 @@
       <description>Penalize trajectories with rotational velocities
       </description>
     </class>
+    <class type="dwb_critics::RotateToPathCritic" base_class_type="dwb_core::TrajectoryCritic">
+      <description> Force robot heading to path before it moves
+      </description>
+    </class>
   </library>
 </class_libraries>

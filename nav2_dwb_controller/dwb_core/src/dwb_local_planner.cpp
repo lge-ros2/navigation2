@@ -212,6 +212,7 @@ DWBLocalPlanner::loadBackwardsCompatibleParameters()
   RCLCPP_INFO(
     node_->get_logger(),
     "DWBLocalPlanner", "No critics configured! Using the default set.");
+  critic_names.push_back("RotateToPath");       // force robot heading to path before it moves
   critic_names.push_back("RotateToGoal");       // discards trajectories that move forward when
                                                 //   already at goal
   critic_names.push_back("Oscillation");        // discards oscillating motions (assisgns cost -1)
@@ -439,6 +440,7 @@ DWBLocalPlanner::coreScoringAlgorithm(
     throw NoLegalTrajectoriesException(tracker);
   }
 
+  //[YJ] limiting fast cornering
   if (abs(best.traj.velocity.x)<0.001 && abs(best.traj.velocity.theta)<0.001) {
     best.traj.velocity.theta = 0.1;
   } else {

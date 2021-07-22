@@ -32,6 +32,9 @@
   <exec_depend>nav2_waypoint_follower</exec_depend>
   <exec_depend>smac_planner</exec_depend>
   <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>
+  <exec_depend>nav2_subscribe_planner</exec_depend>
+  <exec_depend>nav2_static_planner</exec_depend>
+  <exec_depend>nav2_others_footprint_costmap_plugin</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

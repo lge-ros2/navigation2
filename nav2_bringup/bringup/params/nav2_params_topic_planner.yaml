@@ -3,10 +3,10 @@ amcl:
     use_sim_time: True
     set_initial_pose: True
     initial_pose:
-      x: 1.5
-      y: 7.45
+      x: 2.5
+      y: 26.0
       z: 0.0
-      yaw: 0.0
+      yaw: -1.57
     alpha1: 0.1
     alpha2: 0.2
     alpha3: 0.3
@@ -144,7 +144,7 @@ controller_server:
       trans_stopped_velocity: 0.25
       short_circuit_trajectory_evaluation: True
       stateful: True
-      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      critics: ["RotateToPath", "RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       BaseObstacle.scale: 0.02
       PathAlign.scale: 32.0
       PathAlign.forward_point_distance: 0.1
