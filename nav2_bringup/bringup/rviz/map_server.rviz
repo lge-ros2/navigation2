@@ -4,13 +4,9 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /cloi1
         - /cloi1/PoseWithCovariance1
-        - /cloi011
         - /cloi011/Path1
-        - /cloi021
         - /cloi021/PoseWithCovariance1
-        - /cloi031
         - /cloi031/PoseWithCovariance1
         - /cloi041/PoseWithCovariance1
         - /cloi041/Path1
@@ -402,7 +398,7 @@ Visualization Manager:
             Reliability Policy: Reliable
             Value: /cloi04/plan
           Value: true
-      Enabled: false
+      Enabled: true
       Name: cloi04
     - Class: rviz_common/Group
       Displays:
@@ -467,7 +463,7 @@ Visualization Manager:
             Reliability Policy: Reliable
             Value: /cloi05/plan
           Value: true
-      Enabled: false
+      Enabled: true
       Name: cloi05
     - Class: rviz_common/Group
       Displays:
@@ -532,7 +528,7 @@ Visualization Manager:
             Reliability Policy: Reliable
             Value: /cloi06/plan
           Value: true
-      Enabled: false
+      Enabled: true
       Name: cloi06
     - Class: rviz_common/Group
       Displays:
@@ -597,7 +593,7 @@ Visualization Manager:
             Reliability Policy: Reliable
             Value: /cloi07/plan
           Value: true
-      Enabled: false
+      Enabled: true
       Name: cloi07
     - Class: rviz_common/Group
       Displays:
@@ -662,7 +658,7 @@ Visualization Manager:
             Reliability Policy: Reliable
             Value: /cloi08/plan
           Value: true
-      Enabled: false
+      Enabled: true
       Name: cloi08
     - Class: rviz_common/Group
       Displays:
@@ -727,13 +723,13 @@ Visualization Manager:
             Reliability Policy: Reliable
             Value: /cloi09/plan
           Value: true
-      Enabled: false
+      Enabled: true
       Name: cloi09
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        fms: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
