@@ -1,0 +1,5 @@
+<library path="nav2_subscribe_planner">
+	<class name="nav2_subscribe_planner/SubscribePlanner" type="nav2_subscribe_planner::SubscribePlanner" base_class_type="nav2_core::GlobalPlanner">
+	  <description></description>
+	</class>
+</library>
