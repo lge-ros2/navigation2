@@ -43,7 +43,7 @@ Visualization Manager:
         Y: 0
         Z: 0
       Plane: XY
-      Plane Cell Count: 10
+      Plane Cell Count: 100
       Reference Frame: <Fixed Frame>
       Value: true
     - Alpha: 1
@@ -342,7 +342,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -1.5700000524520874
+      Angle: 0.0
       Class: rviz_default_plugins/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -352,16 +352,16 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 134.638427734375
+      Scale: 30.0
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz_default_plugins)
-      X: -0.032615214586257935
-      Y: -0.0801941454410553
+      X: 7.0
+      Y: 15.0
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 914
+  Height: 1100
   Hide Left Dock: false
   Hide Right Dock: true
   Navigation 2:
@@ -373,6 +373,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: true
-  Width: 1545
+  Width: 1341
   X: 186
   Y: 117

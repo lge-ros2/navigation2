@@ -43,6 +43,7 @@ def generate_launch_description():
     autostart = LaunchConfiguration('autostart')
     use_composition = LaunchConfiguration('use_composition')
     use_respawn = LaunchConfiguration('use_respawn')
+    rviz_config_file = LaunchConfiguration('rviz_config')
     log_level = LaunchConfiguration('log_level')
     default_nav_to_pose_bt_xml = LaunchConfiguration('default_nav_to_pose_bt_xml')
 
@@ -110,6 +111,11 @@ def generate_launch_description():
         'use_respawn', default_value='False',
         description='Whether to respawn if a node crashes. Applied when composition is disabled.')
 
+    declare_rviz_config_file_cmd = DeclareLaunchArgument(
+        'rviz_config',
+        default_value=os.path.join(bringup_dir, 'rviz', 'nav2_default_view.rviz'),
+        description='Full path to the RVIZ config file to use')
+
     declare_log_level_cmd = DeclareLaunchArgument(
         'log_level', default_value='info',
         description='log level')
@@ -120,34 +126,11 @@ def generate_launch_description():
 
     # Specify the actions
     bringup_cmd_group = GroupAction([
-        PushRosNamespace(
-            condition=IfCondition(use_namespace),
-            namespace=namespace),
-
-        Node(
-            condition=IfCondition(use_composition),
-            name='nav2_container',
-            package='rclcpp_components',
-            executable='component_container_isolated',
-            parameters=[configured_params, {'autostart': autostart}],
-            arguments=['--ros-args', '--log-level', log_level],
-            remappings=remappings,
-            output='screen'),
-
         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(launch_dir, 'slam_launch.py')),
-            condition=IfCondition(slam),
+            PythonLaunchDescriptionSource(os.path.join(launch_dir, 'bringup_launch.py')),
             launch_arguments={'namespace': namespace,
-                              'use_sim_time': use_sim_time,
-                              'autostart': autostart,
-                              'use_respawn': use_respawn,
-                              'params_file': params_file}.items()),
-
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(launch_dir,
-                                                       'localization_launch.py')),
-            condition=IfCondition(PythonExpression(['not ', slam])),
-            launch_arguments={'namespace': namespace,
+                              'use_namespace': use_namespace,
+                              'slam': slam,
                               'map': map_yaml_file,
                               'use_sim_time': use_sim_time,
                               'autostart': autostart,
@@ -157,14 +140,10 @@ def generate_launch_description():
                               'container_name': 'nav2_container'}.items()),
 
         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(launch_dir, 'navigation_launch.py')),
+            PythonLaunchDescriptionSource(os.path.join(launch_dir, 'cloi_rviz_launch.py')),
             launch_arguments={'namespace': namespace,
-                              'use_sim_time': use_sim_time,
-                              'autostart': autostart,
-                              'params_file': params_file,
-                              'use_composition': use_composition,
-                              'use_respawn': use_respawn,
-                              'container_name': 'nav2_container'}.items()),
+                              'use_namespace': use_namespace,
+                              'rviz_config_file': rviz_config_file}.items()),
     ])
 
     # Create the launch description and populate
@@ -183,6 +162,7 @@ def generate_launch_description():
     ld.add_action(declare_autostart_cmd)
     ld.add_action(declare_use_composition_cmd)
     ld.add_action(declare_use_respawn_cmd)
+    ld.add_action(declare_rviz_config_file_cmd)
     ld.add_action(declare_log_level_cmd)
     ld.add_action(declare_nav_to_pose_bt_xml_cmd)
 
