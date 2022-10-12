@@ -242,7 +242,8 @@ void loadMapFromFile(
           break;
         case MapMode::Raw: {
             double occ_percent = std::round(shade * 255);
-            if (0 <= occ_percent && occ_percent <= 100) {
+            // std::cout << "[DEBUG] [map_io]: (" << x << ", " << y << ") shade: " << shade << ", occ_percent: " << occ_percent << std::endl;
+            if (0 <= occ_percent && occ_percent <= 255) {
               map_cell = static_cast<int8_t>(occ_percent);
             } else {
               map_cell = -1;
