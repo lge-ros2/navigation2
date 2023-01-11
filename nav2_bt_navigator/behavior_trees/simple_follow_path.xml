@@ -1,0 +1,23 @@
+<!--
+  This Behavior Tree follows a dynamic pose to a certain distance
+-->
+
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <Sequence>
+      <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
+      <PipelineSequence name="NavigateWithReplanning">
+        <RateController hz="1.0">
+          <ComputePathToPose goal="{goal}" path="{path}" planner_id="TopicBased"/>
+        </RateController>
+        <RecoveryNode number_of_retries="10" name="FollowPath">
+          <FollowPath path="{path}" controller_id="FollowPath"/>
+          <Sequence>
+            <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <Wait wait_duration="1"/>
+          </Sequence>
+        </RecoveryNode>
+      </PipelineSequence>
+    </Sequence>
+  </BehaviorTree>
+</root>
