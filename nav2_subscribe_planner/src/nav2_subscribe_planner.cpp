@@ -81,6 +81,9 @@ SubscribePlanner::configure(
   declare_parameter_if_not_declared(node, name + ".path_pruning", rclcpp::ParameterValue(true));
   node->get_parameter(name + ".path_pruning", path_pruning_);
 
+  declare_parameter_if_not_declared(node, name + ".path_pruning", rclcpp::ParameterValue(true));
+  node->get_parameter(name + ".path_pruning", path_pruning_);
+
   auto callback = [this](const nav_msgs::msg::Path::SharedPtr msg) -> void {
     path_ = *msg;
   };

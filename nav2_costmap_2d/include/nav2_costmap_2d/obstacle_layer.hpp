@@ -53,7 +53,6 @@
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "sensor_msgs/msg/point_cloud.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
-#include "std_msgs/msg/u_int32_multi_array.hpp"
 #include "nav2_costmap_2d/costmap_layer.hpp"
 #include "nav2_costmap_2d/layered_costmap.hpp"
 #include "nav2_costmap_2d/observation_buffer.hpp"
@@ -250,9 +249,6 @@ protected:
   // Used only for testing purposes
   std::vector<nav2_costmap_2d::Observation> static_clearing_observations_;
   std::vector<nav2_costmap_2d::Observation> static_marking_observations_;
-
-  rclcpp::Publisher<std_msgs::msg::UInt32MultiArray>::SharedPtr obstacle_index_pub_;
-  std::unique_ptr<std_msgs::msg::UInt32MultiArray> obstacle_index_;
 
   bool rolling_window_;
   bool was_reset_;
