@@ -56,6 +56,9 @@ public:
       BT::InputPort<unsigned int>(
         "lpp_duration", 5000,
         "Duration for Lpp"),
+      BT::InputPort<double>(
+        "duration_distance_factor", 3.0,
+        "deviding value for caculate lpp goal distance by lpp duration"),
       BT::InputPort<std::string>(
         "robot_frame", "base_link",
         "Robot base frame id"),

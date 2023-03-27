@@ -62,6 +62,7 @@ namespace nav2_costmap_2d
 
 ObstacleLayer::~ObstacleLayer()
 {
+  std::cout << "ObstacleLayer destructor called" << std::endl;
   dyn_params_handler_.reset();
   for (auto & notifier : observation_notifiers_) {
     notifier.reset();
@@ -70,7 +71,8 @@ ObstacleLayer::~ObstacleLayer()
 
 void ObstacleLayer::onInitialize()
 {
-  RCLCPP_INFO(logger_, "[ObstacleLayer] onInitialize with Obstacle Index Publisher");
+  std::cout << "ObstacleLayer onInitialize called" << std::endl;
+
   bool track_unknown_space;
   double transform_tolerance;
 
@@ -285,12 +287,6 @@ void ObstacleLayer::onInitialize()
       observation_notifiers_.back()->setTargetFrames(target_frames);
     }
   }
-
-  // [sungkyu.kang] create for obstacle index
-  auto custom_qos2 = rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable();
-  obstacle_index_pub_ = node->create_publisher<std_msgs::msg::UInt32MultiArray>(
-    "obstacle_index",
-    custom_qos2);
 }
 
 rcl_interfaces::msg::SetParametersResult
@@ -417,8 +413,9 @@ ObstacleLayer::pointCloud2Callback(
 
 void
 ObstacleLayer::updateBounds(
-  double robot_x, double robot_y, double robot_yaw, double * min_x,
-  double * min_y, double * max_x, double * max_y)
+  double robot_x, double robot_y, double robot_yaw,
+  double * min_x, double * min_y,
+  double * max_x, double * max_y)
 {
   std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
   if (rolling_window_) {
@@ -446,9 +443,6 @@ ObstacleLayer::updateBounds(
     raytraceFreespace(clearing_observations[i], min_x, min_y, max_x, max_y);
   }
 
-  // [sungkyu.kang] prepare msg for obstacle index
-  obstacle_index_ = std::make_unique<std_msgs::msg::UInt32MultiArray>();
-  unsigned int pre_index = -1;
   // place the new obstacles into a priority queue... each with a priority of zero to begin with
   for (std::vector<Observation>::const_iterator it = observations.begin();
     it != observations.end(); ++it)
@@ -463,7 +457,6 @@ ObstacleLayer::updateBounds(
     sensor_msgs::PointCloud2ConstIterator<float> iter_x(cloud, "x");
     sensor_msgs::PointCloud2ConstIterator<float> iter_y(cloud, "y");
     sensor_msgs::PointCloud2ConstIterator<float> iter_z(cloud, "z");
-    // RCLCPP_INFO(logger_, "[ObstacleLayer] observation --------------------------- ");
 
     for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z) {
       double px = *iter_x, py = *iter_y, pz = *iter_z;
@@ -507,24 +500,11 @@ ObstacleLayer::updateBounds(
 
       unsigned int index = getIndex(mx, my);
       costmap_[index] = LETHAL_OBSTACLE;
-      if (pre_index != index) {
-      // RCLCPP_INFO(logger_, "[ObstacleLayer] index: %d. (%d, %d)", index, mx, my);
-        pre_index = index;
-        obstacle_index_->data.push_back(index);
-      }
-
       touch(px, py, min_x, min_y, max_x, max_y);
     }
   }
 
   updateFootprint(robot_x, robot_y, robot_yaw, min_x, min_y, max_x, max_y);
-
-  // [sungkyu.kang] publish obstacle index
-  if (obstacle_index_pub_->get_subscription_count() > 0) {
-    obstacle_index_pub_->publish(std::move(obstacle_index_));
-    RCLCPP_DEBUG(logger_, "[ObstacleLayer] Publish Obstacle Index");
-  }
-  
 }
 
 void
