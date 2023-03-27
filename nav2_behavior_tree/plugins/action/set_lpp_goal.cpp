@@ -48,9 +48,12 @@ inline BT::NodeStatus SetLppGoal::tick()
   geometry_msgs::msg::PoseStamped pose;
   double angular_distance_weight;
   double max_robot_pose_search_dist;
+  double duration_distance_factor;
 
   getInput("lpp_duration", lpp_duration);
-  distance_forward = ((double)lpp_duration / 1000)/3.0;
+  getInput("duration_distance_factor", duration_distance_factor);
+
+  distance_forward = ((double)lpp_duration / 1000)/duration_distance_factor;
   if (distance_forward < 3.0) {
     distance_forward = 3.0;
   }
@@ -65,9 +68,6 @@ inline BT::NodeStatus SetLppGoal::tick()
     closest_pose_detection_begin_ = path_.poses.begin();
   }
 
-  RCLCPP_INFO(
-    config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
-    "SetLppGoal::path_.header.frame_id: %s", path_.header.frame_id.c_str());
   if (!getRobotPose(path_.header.frame_id, pose)) {
     return BT::NodeStatus::FAILURE;
   }
@@ -113,9 +113,10 @@ inline BT::NodeStatus SetLppGoal::tick()
   setOutput("lpp_goal", lpp_goal);
   RCLCPP_INFO(
     config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
-    "SetLppGoal::lpp_goal (%.1f, %.1f | %.1f, %.1f)", 
+    "SetLppGoal::lpp_goal (%.1f, %.1f | %.1f, %.1f), lpp_duration: %d", 
       lpp_goal.pose.position.x, lpp_goal.pose.position.y, 
-      lpp_goal.pose.orientation.z, lpp_goal.pose.orientation.w);
+      lpp_goal.pose.orientation.z, lpp_goal.pose.orientation.w,
+      lpp_duration);
 
   return BT::NodeStatus::SUCCESS;
 }
