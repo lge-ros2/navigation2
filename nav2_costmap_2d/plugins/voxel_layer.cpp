@@ -146,7 +146,7 @@ void VoxelLayer::updateBounds(
   double * min_y, double * max_x, double * max_y)
 {
   std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
-
+  updateRobotYaw(robot_yaw);
   if (rolling_window_) {
     updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
   }
