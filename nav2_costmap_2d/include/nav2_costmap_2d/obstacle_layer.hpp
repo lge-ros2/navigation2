@@ -253,6 +253,12 @@ protected:
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr obstacle_grid_pub_;
   std::unique_ptr<nav_msgs::msg::OccupancyGrid> grid_;
 
+  bool is_init_scan_angle_;
+  bool use_init_scan_angle_;
+  double scan_start_angle_;
+  double scan_end_angle_;
+  float scan_link_offset_;
+  void initializeScanAngle(sensor_msgs::msg::LaserScan::ConstSharedPtr message);
   double current_robot_yaw_;
   void updateRobotYaw(double robot_yaw);
   static char * cost_translation_table_;

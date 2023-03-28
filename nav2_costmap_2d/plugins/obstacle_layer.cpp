@@ -136,7 +136,7 @@ void ObstacleLayer::onInitialize()
     // get the parameters for the specific topic
     double observation_keep_time, expected_update_rate, min_obstacle_height, max_obstacle_height;
     std::string topic, sensor_frame, data_type;
-    bool inf_is_valid, clearing, marking;
+    bool inf_is_valid, clearing, marking, init_scan_angle;
 
     declareParameter(source + "." + "topic", rclcpp::ParameterValue(source));
     declareParameter(source + "." + "sensor_frame", rclcpp::ParameterValue(std::string("")));
@@ -152,6 +152,8 @@ void ObstacleLayer::onInitialize()
     declareParameter(source + "." + "obstacle_min_range", rclcpp::ParameterValue(0.0));
     declareParameter(source + "." + "raytrace_max_range", rclcpp::ParameterValue(3.0));
     declareParameter(source + "." + "raytrace_min_range", rclcpp::ParameterValue(0.0));
+    declareParameter(source + "." + "init_scan_angle", rclcpp::ParameterValue(true));
+    declareParameter(source + "." + "scan_link_offset", rclcpp::ParameterValue(2.0));
 
     node->get_parameter(name_ + "." + source + "." + "topic", topic);
     node->get_parameter(name_ + "." + source + "." + "sensor_frame", sensor_frame);
@@ -186,6 +188,8 @@ void ObstacleLayer::onInitialize()
     node->get_parameter(name_ + "." + source + "." + "raytrace_min_range", raytrace_min_range);
     node->get_parameter(name_ + "." + source + "." + "raytrace_max_range", raytrace_max_range);
 
+    node->get_parameter(name_ + "." + source + "." + "init_scan_angle", init_scan_angle);
+    node->get_parameter(name_ + "." + source + "." + "scan_link_offset", scan_link_offset_);
 
     RCLCPP_DEBUG(
       logger_,
@@ -287,9 +291,14 @@ void ObstacleLayer::onInitialize()
       target_frames.push_back(sensor_frame);
       observation_notifiers_.back()->setTargetFrames(target_frames);
     }
+
+    // [sungkyu.kang] initialize use_init_scan_angle_ parameter
+    use_init_scan_angle_ = init_scan_angle;
   }
 
   // [sungkyu.kang] create for obstacle index
+  is_init_scan_angle_ = false;
+
   auto custom_qos2 = rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable();
   obstacle_grid_pub_ = node->create_publisher<nav_msgs::msg::OccupancyGrid>(
     "obstacle_map",
@@ -347,10 +356,48 @@ ObstacleLayer::dynamicParametersCallback(
 }
 
 void
+ObstacleLayer::initializeScanAngle(sensor_msgs::msg::LaserScan::ConstSharedPtr message)
+{
+  // [sungkyu.kang] initialize scan angles
+  RCLCPP_INFO(logger_, "ObstacleLayer::initializeScanAngle");
+  if (use_init_scan_angle_) {
+    float current_angle = message->angle_min;
+    float range = 0.0;
+
+    for (size_t i = 0; i < message->ranges.size(); i++) {
+      range = message->ranges[i];
+      if (range >= message->range_min && range <= message->range_max) {
+        scan_start_angle_ = current_angle + 0.05;
+        break;
+      }
+      current_angle = current_angle + message->angle_increment;
+    }
+    current_angle = message->angle_max;
+    for (size_t i = message->ranges.size(); i > 0; i--) {
+      range = message->ranges[i];
+      if (range >= message->range_min && range <= message->range_max) {
+        scan_end_angle_ = current_angle - 0.05;
+        break;
+      }
+      current_angle = current_angle - message->angle_increment;
+    }
+  } else {
+    scan_start_angle_ = message->angle_min;
+    scan_end_angle_ = message->angle_max;
+  }
+
+  RCLCPP_INFO(logger_, "    scan_start_angle: %f, scan_end_angle_: %f", scan_start_angle_, scan_end_angle_);
+  is_init_scan_angle_ = true;
+}
+
+void
 ObstacleLayer::laserScanCallback(
   sensor_msgs::msg::LaserScan::ConstSharedPtr message,
   const std::shared_ptr<nav2_costmap_2d::ObservationBuffer> & buffer)
 {
+  if (!is_init_scan_angle_) {
+    initializeScanAngle(message);
+  }
   // project the laser into a point cloud
   sensor_msgs::msg::PointCloud2 cloud;
   cloud.header = message->header;
@@ -385,6 +432,9 @@ ObstacleLayer::laserScanValidInfCallback(
   sensor_msgs::msg::LaserScan::ConstSharedPtr raw_message,
   const std::shared_ptr<nav2_costmap_2d::ObservationBuffer> & buffer)
 {
+  if (!is_init_scan_angle_) {
+    initializeScanAngle(raw_message);
+  }
   // Filter positive infinities ("Inf"s) to max_range.
   float epsilon = 0.0001;  // a tenth of a millimeter
   sensor_msgs::msg::LaserScan message = *raw_message;
@@ -437,7 +487,7 @@ ObstacleLayer::pointCloud2Callback(
 void 
 ObstacleLayer::updateRobotYaw(double robot_yaw)
 {
-  // [zikprid] set current_robot_yaw_
+  // [sungkyu.kang] set current_robot_yaw_
   current_robot_yaw_ = robot_yaw;
   // RCLCPP_INFO(logger_, "updateBounds - robot_yaw: %f, current_robot_yaw_: %f", robot_yaw, current_robot_yaw_);
 }
@@ -588,7 +638,7 @@ ObstacleLayer::updateCosts(
       break;
   }
 
-  // [zikprid] publish current master grid
+  // [sungkyu.kang] publish current master grid
   if (obstacle_grid_pub_->get_subscription_count() > 0) {
     prepareGrid(master_grid);
     obstacle_grid_pub_->publish(std::move(grid_));
@@ -622,34 +672,27 @@ void ObstacleLayer::prepareGrid(nav2_costmap_2d::Costmap2D costmap)
 
   grid_->data.resize(grid_->info.width * grid_->info.height);
 
-  double scan_start_angle = -1.85;
-  double scan_end_angle = 1.85;
   unsigned char * data = costmap.getCharMap();
-  // double normalLeftX = -1 * sin(current_robot_yaw_ - scan_start_angle);
-  // double normalLeftY = cos(current_robot_yaw_ - scan_start_angle);
-  // double normalRightX = sin(current_robot_yaw_ - scan_end_angle);
-  // double normalRightY = -1 * cos(current_robot_yaw_ - scan_end_angle);
 
-
-  double normalLeftX = -1 * sin(current_robot_yaw_ - scan_start_angle);
-  double normalLeftY = cos(current_robot_yaw_ - scan_start_angle);
-  double normalRightX = sin(current_robot_yaw_ - scan_end_angle);
-  double normalRightY = -1 * cos(current_robot_yaw_ - scan_end_angle);
+  double normalLeftX = -1 * sin(current_robot_yaw_ - scan_start_angle_);
+  double normalLeftY = cos(current_robot_yaw_ - scan_start_angle_);
+  double normalRightX = sin(current_robot_yaw_ - scan_end_angle_);
+  double normalRightY = -1 * cos(current_robot_yaw_ - scan_end_angle_);
 
   // RCLCPP_INFO(
   //   logger_,
-  //   "\nObstacleLayer::prepareGrid %f, %f, %f.\n    %f, %f, %f, %f", current_robot_yaw_, current_robot_yaw_ - scan_start_angle, current_robot_yaw_ - scan_end_angle, normalLeftX, normalLeftY, normalRightX, normalRightY);
+  //   "\nObstacleLayer::prepareGrid %f, %f, %f.\n    %f, %f, %f, %f", current_robot_yaw_, current_robot_yaw_ - scan_start_angle_, current_robot_yaw_ - scan_end_angle_, normalLeftX, normalLeftY, normalRightX, normalRightY);
   int x, y;
   unsigned int row_index, col_index;
-  int scan_tf_offset_x = round(2 * cos(current_robot_yaw_));
-  int scan_tf_offset_y = round(2 * sin(current_robot_yaw_));
+  int scan_tf_offset_x = round(scan_link_offset_ * cos(current_robot_yaw_));
+  int scan_tf_offset_y = round(scan_link_offset_ * sin(current_robot_yaw_));
   // RCLCPP_INFO(logger_, "scan_tf_offset_x: %d, scan_tf_offset_y: %d", scan_tf_offset_x, scan_tf_offset_y);
   for (unsigned int i = 0; i < grid_->data.size(); i++) {
-    // [zikprid] check robot orientation. fill -1 back of robot.
+    // [sungkyu.kang] check robot orientation. fill -1 back of robot.
     row_index = i / grid_width;
     col_index = i % grid_width;
-    x = col_index - grid_height / 2 + scan_tf_offset_x;
-    y = row_index - grid_width / 2 + scan_tf_offset_y;
+    x = col_index - grid_height / 2 - scan_tf_offset_x;
+    y = row_index - grid_width / 2 - scan_tf_offset_y;
     // RCLCPP_INFO(
     //   logger_,
     //   " [%4d] row_index: %2d, col_index: %2d, (%2d, %2d)", i, row_index, col_index, x, y);
