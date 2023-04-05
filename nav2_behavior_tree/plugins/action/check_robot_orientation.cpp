@@ -24,12 +24,12 @@
 #include "nav_msgs/msg/path.hpp"
 #include "tf2_ros/create_timer_ros.h"
 
-#include "nav2_behavior_tree/plugins/action/truncate_path_local_action.hpp"
+#include "nav2_behavior_tree/plugins/action/check_robot_orientation.hpp"
 
 namespace nav2_behavior_tree
 {
 
-TruncatePathLocal::TruncatePathLocal(
+CheckRobotOrientation::CheckRobotOrientation(
   const std::string & name,
   const BT::NodeConfiguration & conf)
 : BT::ActionNodeBase(name, conf)
@@ -39,23 +39,22 @@ TruncatePathLocal::TruncatePathLocal(
     "tf_buffer");
 }
 
-inline BT::NodeStatus TruncatePathLocal::tick()
+inline BT::NodeStatus CheckRobotOrientation::tick()
 {
   setStatus(BT::NodeStatus::RUNNING);
 
-  double distance_forward, distance_backward;
+  double distance_forward = 3.0;
   geometry_msgs::msg::PoseStamped pose;
   double angular_distance_weight;
   double max_robot_pose_search_dist;
-
-  getInput("distance_forward", distance_forward);
-  getInput("distance_backward", distance_backward);
+  
   getInput("angular_distance_weight", angular_distance_weight);
   getInput("max_robot_pose_search_dist", max_robot_pose_search_dist);
+  getInput("threshold", threshold_);
 
   bool path_pruning = std::isfinite(max_robot_pose_search_dist);
   nav_msgs::msg::Path new_path;
-  getInput("input_path", new_path);
+  getInput("path", new_path);
   if (!path_pruning || new_path != path_) {
     path_ = new_path;
     closest_pose_detection_begin_ = path_.poses.begin();
@@ -66,7 +65,7 @@ inline BT::NodeStatus TruncatePathLocal::tick()
   }
 
   if (path_.poses.empty()) {
-    setOutput("output_path", path_);
+    setOutput("lpp_goal", path_.poses.back());
     return BT::NodeStatus::SUCCESS;
   }
 
@@ -94,33 +93,60 @@ inline BT::NodeStatus TruncatePathLocal::tick()
   // expand backwards to extract desired length
   // Note: current_pose + 1 is used because reverse iterator points to a cell before it
   auto backward_pose_it = nav2_util::geometry_utils::first_after_integrated_distance(
-    std::reverse_iterator(current_pose + 1), path_.poses.rend(), distance_backward);
+    std::reverse_iterator(current_pose + 1), path_.poses.rend(), 0.0);
 
   nav_msgs::msg::Path output_path;
   output_path.header = path_.header;
   output_path.poses = std::vector<geometry_msgs::msg::PoseStamped>(
     backward_pose_it.base(), forward_pose_it);
-  setOutput("output_path", output_path);
 
-  geometry_msgs::msg::PoseStamped final_pose = output_path.poses.back();
-  RCLCPP_INFO(
-    config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
-    "TruncatePathLocal::Final pose (%f, %f | %f, %f)", 
-      final_pose.pose.position.x, final_pose.pose.position.y, 
-      final_pose.pose.orientation.z, final_pose.pose.orientation.w);
+  if (output_path.poses.size() < 2) {
+    return BT::NodeStatus::SUCCESS;
+  }
+
+  double dx = output_path.poses[1].pose.position.x - output_path.poses[0].pose.position.x;
+  double dy = output_path.poses[1].pose.position.y - output_path.poses[0].pose.position.y;
+
+  double path_yaw = atan2(dy, dx);
+
+  if (std::isnan(path_yaw) || std::isinf(path_yaw)) {
+    // RCLCPP_WARN(
+    //   config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+    //   "Path angle is not valid while check robot orientation. return SUCCESS");
+    return BT::NodeStatus::SUCCESS;
+  }
+
+  tf2::Quaternion q(
+    (*current_pose).pose.orientation.x,
+    (*current_pose).pose.orientation.y,
+    (*current_pose).pose.orientation.z,
+    (*current_pose).pose.orientation.w);
+  tf2::Matrix3x3 m(q);
+  double roll, pitch, yaw;
+  m.getRPY(roll, pitch, yaw);
+
+  // RCLCPP_INFO(
+  //   config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+  //   "CheckRobotOrientation:: path_yaw: %.2f, yaw: %.2f, threshold: %.2f", path_yaw, yaw, threshold_);
+
+  std::cout << "CheckRobotOrientation:: path_yaw: " << path_yaw <<", yaw: " << yaw << ", threshold: " << threshold_ << std::endl;
+
+  if (fabs(path_yaw - yaw) < threshold_) {
+    return BT::NodeStatus::FAILURE;
+  }
 
   return BT::NodeStatus::SUCCESS;
 }
 
-inline bool TruncatePathLocal::getRobotPose(
+inline bool CheckRobotOrientation::getRobotPose(
   std::string path_frame_id, geometry_msgs::msg::PoseStamped & pose)
 {
   if (!getInput("pose", pose)) {
     std::string robot_frame;
     if (!getInput("robot_frame", robot_frame)) {
-      RCLCPP_ERROR(
-        config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
-        "Neither pose nor robot_frame specified for %s", name().c_str());
+      // RCLCPP_ERROR(
+      //   config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+      //   "Neither pose nor robot_frame specified for %s", name().c_str());
       return false;
     }
     double transform_tolerance;
@@ -128,9 +154,9 @@ inline bool TruncatePathLocal::getRobotPose(
     if (!nav2_util::getCurrentPose(
         pose, *tf_buffer_, path_frame_id, robot_frame, transform_tolerance))
     {
-      RCLCPP_WARN(
-        config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
-        "Failed to lookup current robot pose for %s", name().c_str());
+      // RCLCPP_WARN(
+      //   config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+      //   "Failed to lookup current robot pose for %s", name().c_str());
       return false;
     }
   }
@@ -138,7 +164,7 @@ inline bool TruncatePathLocal::getRobotPose(
 }
 
 double
-TruncatePathLocal::poseDistance(
+CheckRobotOrientation::poseDistance(
   const geometry_msgs::msg::PoseStamped & pose1,
   const geometry_msgs::msg::PoseStamped & pose2,
   const double angular_distance_weight)
@@ -159,6 +185,6 @@ TruncatePathLocal::poseDistance(
 
 #include "behaviortree_cpp_v3/bt_factory.h"
 BT_REGISTER_NODES(factory) {
-  factory.registerNodeType<nav2_behavior_tree::TruncatePathLocal>(
-    "TruncatePathLocal");
+  factory.registerNodeType<nav2_behavior_tree::CheckRobotOrientation>(
+    "CheckRobotOrientation");
 }
