@@ -136,7 +136,7 @@ void ObstacleLayer::onInitialize()
     // get the parameters for the specific topic
     double observation_keep_time, expected_update_rate, min_obstacle_height, max_obstacle_height;
     std::string topic, sensor_frame, data_type;
-    bool inf_is_valid, clearing, marking, init_scan_angle;
+    bool inf_is_valid, clearing, marking;
 
     declareParameter(source + "." + "topic", rclcpp::ParameterValue(source));
     declareParameter(source + "." + "sensor_frame", rclcpp::ParameterValue(std::string("")));
@@ -152,8 +152,12 @@ void ObstacleLayer::onInitialize()
     declareParameter(source + "." + "obstacle_min_range", rclcpp::ParameterValue(0.0));
     declareParameter(source + "." + "raytrace_max_range", rclcpp::ParameterValue(3.0));
     declareParameter(source + "." + "raytrace_min_range", rclcpp::ParameterValue(0.0));
+
+    bool init_scan_angle;
+    double publish_cycle;
     declareParameter(source + "." + "init_scan_angle", rclcpp::ParameterValue(true));
     declareParameter(source + "." + "scan_link_offset", rclcpp::ParameterValue(2.0));
+    declareParameter(source + "." + "publish_cycle", rclcpp::ParameterValue(1.0));
 
     node->get_parameter(name_ + "." + source + "." + "topic", topic);
     node->get_parameter(name_ + "." + source + "." + "sensor_frame", sensor_frame);
@@ -190,6 +194,13 @@ void ObstacleLayer::onInitialize()
 
     node->get_parameter(name_ + "." + source + "." + "init_scan_angle", init_scan_angle);
     node->get_parameter(name_ + "." + source + "." + "scan_link_offset", scan_link_offset_);
+    node->get_parameter(name_ + "." + source + "." + "publish_cycle", publish_cycle);
+
+    if (publish_cycle > 0) {
+      publish_cycle_ = rclcpp::Duration::from_seconds( publish_cycle );
+    } else {
+      publish_cycle_ = rclcpp::Duration(0, 0);
+    }
 
     RCLCPP_DEBUG(
       logger_,
@@ -639,9 +650,17 @@ ObstacleLayer::updateCosts(
   }
 
   // [sungkyu.kang] publish current master grid
-  if (obstacle_grid_pub_->get_subscription_count() > 0) {
-    prepareGrid(master_grid);
-    obstacle_grid_pub_->publish(std::move(grid_));
+
+  if (publish_cycle_ > rclcpp::Duration(0, 0) && obstacle_grid_pub_->get_subscription_count() > 0) {
+
+    auto current_time = clock_->now();
+    if ((last_publish_ + publish_cycle_ < current_time) ||  // publish_cycle_ is due
+      (current_time < last_publish_))      // time has moved backwards, probably due to a switch to sim_time // NOLINT
+    {
+      prepareGrid(master_grid);
+      obstacle_grid_pub_->publish(std::move(grid_));
+      last_publish_ = current_time;
+    }
   }
 
 }

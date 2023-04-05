@@ -224,6 +224,7 @@ local_costmap:
           obstacle_max_range: 5.0
           obstacle_min_range: 0.0
           scan_link_offset: 2.0
+          publish_cycle: 1.0
           # init_scan_angle: False
       static_layer:
         map_subscribe_transient_local: True

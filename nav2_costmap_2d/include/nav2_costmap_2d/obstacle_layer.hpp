@@ -262,6 +262,8 @@ protected:
   double current_robot_yaw_;
   void updateRobotYaw(double robot_yaw);
   static char * cost_translation_table_;
+  rclcpp::Time last_publish_{0, 0, RCL_ROS_TIME};
+  rclcpp::Duration publish_cycle_{1, 0};
   void prepareGrid(nav2_costmap_2d::Costmap2D costmap);
 
   bool rolling_window_;
