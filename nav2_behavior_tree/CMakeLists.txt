@@ -195,6 +195,22 @@ list(APPEND plugin_libs nav2_goal_checker_selector_bt_node)
 add_library(nav2_goal_updated_controller_bt_node SHARED plugins/decorator/goal_updated_controller.cpp)
 list(APPEND plugin_libs nav2_goal_updated_controller_bt_node)
 
+# [sungkyu.kang] add library for lpp
+add_library(nav2_request_trigger_lpp_bt_node SHARED plugins/action/request_trigger_lpp.cpp)
+list(APPEND plugin_libs nav2_request_trigger_lpp_bt_node)
+
+add_library(nav2_print_blackboard_double_bt_node SHARED plugins/action/print_blackboard_double.cpp)
+list(APPEND plugin_libs nav2_print_blackboard_double_bt_node)
+
+add_library(nav2_check_front_obstacle_bt_node SHARED plugins/action/check_front_obstacle.cpp)
+list(APPEND plugin_libs nav2_check_front_obstacle_bt_node)
+
+add_library(nav2_set_lpp_goal_bt_node SHARED plugins/action/set_lpp_goal.cpp)
+list(APPEND plugin_libs nav2_set_lpp_goal_bt_node)
+
+add_library(nav2_check_robot_orientation_bt_node SHARED plugins/action/check_robot_orientation.cpp)
+list(APPEND plugin_libs nav2_check_robot_orientation_bt_node)
+
 foreach(bt_plugin ${plugin_libs})
   ament_target_dependencies(${bt_plugin} ${dependencies})
   target_compile_definitions(${bt_plugin} PRIVATE BT_PLUGIN_EXPORT)

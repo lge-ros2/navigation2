@@ -325,6 +325,12 @@ bool ControllerServer::findGoalCheckerId(
         " Server will use only plugin loaded %s. "
         "This warning will appear once.", goal_checker_ids_concat_.c_str());
       current_goal_checker = goal_checkers_.begin()->first;
+    } else if (goal_checkers_.size() > 0 && c_name.empty()) {
+      RCLCPP_WARN_ONCE(
+        get_logger(), "No goal checker was specified in parameter 'current_goal_checker'."
+        " Server will select plugin %s. "
+        "This warning will appear once.", goal_checker_ids_[0].c_str());
+      current_goal_checker = goal_checker_ids_[0];
     } else {
       RCLCPP_ERROR(
         get_logger(), "FollowPath called with goal_checker name %s in parameter"
@@ -334,6 +340,7 @@ bool ControllerServer::findGoalCheckerId(
     }
   } else {
     RCLCPP_DEBUG(get_logger(), "Selected goal checker: %s.", c_name.c_str());
+    RCLCPP_INFO(get_logger(), "Selected goal checker: %s.", c_name.c_str());
     current_goal_checker = c_name;
   }
 

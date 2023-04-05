@@ -51,6 +51,11 @@ NavigateToPoseNavigator::configure(
     "goal_pose",
     rclcpp::SystemDefaultsQoS(),
     std::bind(&NavigateToPoseNavigator::onGoalPoseReceived, this, std::placeholders::_1));
+
+  if (!node->has_parameter("cout_bt_logger")) {
+    node->declare_parameter("cout_bt_logger", false);
+  }
+  node->get_parameter("cout_bt_logger", cout_bt_logger_);
   return true;
 }
 
@@ -96,6 +101,9 @@ NavigateToPoseNavigator::goalReceived(ActionT::Goal::ConstSharedPtr goal)
   }
 
   initializeGoalPose(goal);
+  if (cout_bt_logger_) {
+    logger_cout_ = new BT::StdCoutLogger(bt_action_server_->getTree());
+  }
 
   return true;
 }
@@ -105,6 +113,9 @@ NavigateToPoseNavigator::goalCompleted(
   typename ActionT::Result::SharedPtr /*result*/,
   const nav2_behavior_tree::BtStatus /*final_bt_status*/)
 {
+  if (cout_bt_logger_) {
+    delete(logger_cout_);
+  }
 }
 
 void
