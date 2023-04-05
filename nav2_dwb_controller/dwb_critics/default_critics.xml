@@ -24,6 +24,9 @@
       <description>Forces the commanded trajectories to only be rotations if within a certain distance window
       </description>
     </class>
+    <class type="dwb_critics::RotateToPathCritic" base_class_type="dwb_core::TrajectoryCritic">
+      <description>Forces the robot heading to path before it moves</description>
+    </class>
     <class type="dwb_critics::BaseObstacleCritic" base_class_type="dwb_core::TrajectoryCritic">
       <description>Uses costmap 2d to assign negative costs if a circular robot
                    would collide at any point of the trajectory.

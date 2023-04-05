@@ -24,12 +24,12 @@
 #include "nav_msgs/msg/path.hpp"
 #include "tf2_ros/create_timer_ros.h"
 
-#include "nav2_behavior_tree/plugins/action/truncate_path_local_action.hpp"
+#include "nav2_behavior_tree/plugins/action/set_lpp_goal.hpp"
 
 namespace nav2_behavior_tree
 {
 
-TruncatePathLocal::TruncatePathLocal(
+SetLppGoal::SetLppGoal(
   const std::string & name,
   const BT::NodeConfiguration & conf)
 : BT::ActionNodeBase(name, conf)
@@ -39,34 +39,41 @@ TruncatePathLocal::TruncatePathLocal(
     "tf_buffer");
 }
 
-inline BT::NodeStatus TruncatePathLocal::tick()
+inline BT::NodeStatus SetLppGoal::tick()
 {
   setStatus(BT::NodeStatus::RUNNING);
 
-  double distance_forward, distance_backward;
+  int lpp_duration;
+  double distance_forward;
   geometry_msgs::msg::PoseStamped pose;
   double angular_distance_weight;
   double max_robot_pose_search_dist;
 
-  getInput("distance_forward", distance_forward);
-  getInput("distance_backward", distance_backward);
+  getInput("lpp_duration", lpp_duration);
+  distance_forward = ((double)lpp_duration / 1000)/3.0;
+  if (distance_forward < 3.0) {
+    distance_forward = 3.0;
+  }
   getInput("angular_distance_weight", angular_distance_weight);
   getInput("max_robot_pose_search_dist", max_robot_pose_search_dist);
 
   bool path_pruning = std::isfinite(max_robot_pose_search_dist);
   nav_msgs::msg::Path new_path;
-  getInput("input_path", new_path);
+  getInput("path", new_path);
   if (!path_pruning || new_path != path_) {
     path_ = new_path;
     closest_pose_detection_begin_ = path_.poses.begin();
   }
 
+  RCLCPP_INFO(
+    config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+    "SetLppGoal::path_.header.frame_id: %s", path_.header.frame_id.c_str());
   if (!getRobotPose(path_.header.frame_id, pose)) {
     return BT::NodeStatus::FAILURE;
   }
 
   if (path_.poses.empty()) {
-    setOutput("output_path", path_);
+    setOutput("lpp_goal", path_.poses.back());
     return BT::NodeStatus::SUCCESS;
   }
 
@@ -94,25 +101,26 @@ inline BT::NodeStatus TruncatePathLocal::tick()
   // expand backwards to extract desired length
   // Note: current_pose + 1 is used because reverse iterator points to a cell before it
   auto backward_pose_it = nav2_util::geometry_utils::first_after_integrated_distance(
-    std::reverse_iterator(current_pose + 1), path_.poses.rend(), distance_backward);
+    std::reverse_iterator(current_pose + 1), path_.poses.rend(), 0.0);
 
   nav_msgs::msg::Path output_path;
   output_path.header = path_.header;
   output_path.poses = std::vector<geometry_msgs::msg::PoseStamped>(
     backward_pose_it.base(), forward_pose_it);
-  setOutput("output_path", output_path);
 
-  geometry_msgs::msg::PoseStamped final_pose = output_path.poses.back();
+  geometry_msgs::msg::PoseStamped lpp_goal = output_path.poses.back();
+  lpp_goal.header = path_.header;
+  setOutput("lpp_goal", lpp_goal);
   RCLCPP_INFO(
     config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
-    "TruncatePathLocal::Final pose (%f, %f | %f, %f)", 
-      final_pose.pose.position.x, final_pose.pose.position.y, 
-      final_pose.pose.orientation.z, final_pose.pose.orientation.w);
+    "SetLppGoal::lpp_goal (%.1f, %.1f | %.1f, %.1f)", 
+      lpp_goal.pose.position.x, lpp_goal.pose.position.y, 
+      lpp_goal.pose.orientation.z, lpp_goal.pose.orientation.w);
 
   return BT::NodeStatus::SUCCESS;
 }
 
-inline bool TruncatePathLocal::getRobotPose(
+inline bool SetLppGoal::getRobotPose(
   std::string path_frame_id, geometry_msgs::msg::PoseStamped & pose)
 {
   if (!getInput("pose", pose)) {
@@ -138,7 +146,7 @@ inline bool TruncatePathLocal::getRobotPose(
 }
 
 double
-TruncatePathLocal::poseDistance(
+SetLppGoal::poseDistance(
   const geometry_msgs::msg::PoseStamped & pose1,
   const geometry_msgs::msg::PoseStamped & pose2,
   const double angular_distance_weight)
@@ -159,6 +167,6 @@ TruncatePathLocal::poseDistance(
 
 #include "behaviortree_cpp_v3/bt_factory.h"
 BT_REGISTER_NODES(factory) {
-  factory.registerNodeType<nav2_behavior_tree::TruncatePathLocal>(
-    "TruncatePathLocal");
+  factory.registerNodeType<nav2_behavior_tree::SetLppGoal>(
+    "SetLppGoal");
 }
