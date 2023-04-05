@@ -27,6 +27,7 @@
 #include "nav2_util/robot_utils.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "nav2_util/odometry_utils.hpp"
+#include "behaviortree_cpp_v3/loggers/bt_cout_logger.h"
 
 namespace nav2_bt_navigator
 {
@@ -129,6 +130,8 @@ protected:
 
   // Odometry smoother object
   std::shared_ptr<nav2_util::OdomSmoother> odom_smoother_;
+  BT::StdCoutLogger* logger_cout_;
+  bool cout_bt_logger_;
 };
 
 }  // namespace nav2_bt_navigator

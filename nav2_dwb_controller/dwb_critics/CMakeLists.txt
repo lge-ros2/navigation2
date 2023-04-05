@@ -33,6 +33,7 @@ add_library(${PROJECT_NAME} SHARED
     src/oscillation.cpp
     src/prefer_forward.cpp
     src/rotate_to_goal.cpp
+    src/rotate_to_path.cpp
     src/twirling.cpp
 )
 
