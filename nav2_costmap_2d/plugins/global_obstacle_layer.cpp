@@ -54,7 +54,7 @@ void GlobalObstacleLayer::onInitialize()
 {
   ObstacleLayer::onInitialize();
 
-  RCLCPP_INFO(logger_, "[GlobalObstacleLayer] onInitialize with Obstacle Index Publisher");
+  RCLCPP_INFO(logger_, "[GlobalObstacleLayer] onInitialize with Obstacle Publisher");
 
   auto node = node_.lock();
   if (!node) {

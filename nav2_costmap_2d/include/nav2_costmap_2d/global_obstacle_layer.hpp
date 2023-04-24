@@ -61,6 +61,7 @@ public:
    * @brief Initialization process of layer on startup
    */
   virtual void onInitialize();
+
   /**
    * @brief Update the bounds of the master costmap by this layer's update dimensions
    * @param robot_x X pose of robot
@@ -72,10 +73,10 @@ public:
    * @param max_y Y max map coord of the window to update
    */
   virtual void updateBounds(
-    double robot_x, double robot_y, double robot_yaw, double * min_x,
-    double * min_y,
-    double * max_x,
-    double * max_y);
+    double robot_x, double robot_y, double robot_yaw,
+    double * min_x, double * min_y,
+    double * max_x, double * max_y);
+
   /**
    * @brief Update the costs in the master costmap in the window
    * @param master_grid The master costmap grid to update
@@ -107,7 +108,6 @@ public:
     const std::shared_ptr<nav2_costmap_2d::ObservationBuffer> & buffer);
 
 protected:
-
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr obstacle_grid_pub_;
   std::unique_ptr<nav_msgs::msg::OccupancyGrid> grid_;
 

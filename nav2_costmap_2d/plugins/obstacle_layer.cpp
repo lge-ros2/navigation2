@@ -413,8 +413,9 @@ ObstacleLayer::pointCloud2Callback(
 
 void
 ObstacleLayer::updateBounds(
-  double robot_x, double robot_y, double robot_yaw, double * min_x,
-  double * min_y, double * max_x, double * max_y)
+  double robot_x, double robot_y, double robot_yaw,
+  double * min_x, double * min_y,
+  double * max_x, double * max_y)
 {
   std::lock_guard<Costmap2D::mutex_t> guard(*getMutex());
   if (rolling_window_) {

@@ -55,6 +55,10 @@ public:
   GlobalVoxelLayer()
   : VoxelLayer()
   {};
+  /**
+   * @brief Initialization process of layer on startup
+   */
+  virtual void onInitialize();
 
   /**
    * @brief Update the bounds of the master costmap by this layer's update dimensions
@@ -71,8 +75,56 @@ public:
     double * min_x, double * min_y,
     double * max_x, double * max_y);
 
+  /**
+   * @brief Update the costs in the master costmap in the window
+   * @param master_grid The master costmap grid to update
+   * @param min_x X min map coord of the window to update
+   * @param min_y Y min map coord of the window to update
+   * @param max_x X max map coord of the window to update
+   * @param max_y Y max map coord of the window to update
+   */
+  virtual void updateCosts(
+    nav2_costmap_2d::Costmap2D & master_grid,
+    int min_i, int min_j, int max_i, int max_j);
+
+  /**
+   * @brief  A callback to handle buffering LaserScan messages
+   * @param message The message returned from a message notifier
+   * @param buffer A pointer to the observation buffer to update
+   */
+  void laserScanCallback(
+    sensor_msgs::msg::LaserScan::ConstSharedPtr message,
+    const std::shared_ptr<nav2_costmap_2d::ObservationBuffer> & buffer);
+
+  /**
+   * @brief A callback to handle buffering LaserScan messages which need filtering to turn Inf values into range_max.
+   * @param message The message returned from a message notifier
+   * @param buffer A pointer to the observation buffer to update
+   */
+  void laserScanValidInfCallback(
+    sensor_msgs::msg::LaserScan::ConstSharedPtr message,
+    const std::shared_ptr<nav2_costmap_2d::ObservationBuffer> & buffer);
+
 protected:
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr obstacle_grid_pub_;
+  std::unique_ptr<nav_msgs::msg::OccupancyGrid> grid_;
+
+  bool is_init_scan_angle_;
+  bool use_init_scan_angle_;
+  double scan_start_angle_;
+  double scan_end_angle_;
+  float scan_link_offset_;
   double current_robot_yaw_;
+  static char * cost_translation_table_;
+  rclcpp::Time last_publish_{0, 0, RCL_ROS_TIME};
+  rclcpp::Duration publish_cycle_{1, 0};
+
+protected:
+  void updateRobotYaw(const double robot_yaw);
+
+private:
+  void initializeScanAngle(sensor_msgs::msg::LaserScan::ConstSharedPtr message);
+  void prepareGrid(nav2_costmap_2d::Costmap2D costmap);
 };
 
 }  // namespace nav2_costmap_2d
