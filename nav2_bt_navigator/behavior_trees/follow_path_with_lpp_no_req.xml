@@ -27,36 +27,19 @@
     <!-- ////////// -->
     <BehaviorTree ID="NavigateToLppPose">
         <RetryUntilSuccessful num_attempts="100">
-            <Fallback>
-                <Parallel failure_threshold="1" success_threshold="1">
-                    <RetryUntilSuccessful num_attempts="100">
-                        <Repeat num_cycles="1">
-                            <Sequence>
-                                <Action ID="Wait" wait_duration="1"/>
-                                <Action ID="CheckFrontObstacle" angle="1.57" name="CheckFrontObstacleWhileLpp" range="2.1" rotate_threshold="1.0"/>
-                            </Sequence>
-                        </Repeat>
-                    </RetryUntilSuccessful>
-                    <Inverter>
-                        <Control ID="RateController" hz="10">
-                            <Action ID="RequestTriggerLpp" lpp_duration="{lpp_duration}"/>
+            <Sequence>
+                <Action ID="SetLppGoal" lpp_duration="1000" lpp_goal="{lpp_goal}" path="{path}"/>
+                <Timeout msec="1000">
+                    <Control ID="PipelineSequence">
+                        <Control ID="RateController" hz="1.0">
+                            <Action ID="ComputePathToPose" goal="{lpp_goal}" path="{lpp_path}" planner_id="GridBased"/>
                         </Control>
-                    </Inverter>
-                </Parallel>
-                <Sequence>
-                    <Action ID="SetLppGoal" lpp_duration="{lpp_duration}" lpp_goal="{lpp_goal}" path="{path}"/>
-                    <Timeout msec="{lpp_duration}" name="FollowLPPTimeout">
-                        <Control ID="PipelineSequence">
-                            <Control ID="RateController" hz="1.0">
-                                <Action ID="ComputePathToPose" goal="{lpp_goal}" name="ComputePathToLppGoal" path="{lpp_path}" planner_id="GridBased"/>
-                            </Control>
-                            <RetryUntilSuccessful num_attempts="3">
-                                <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="only_position_checker" name="FollowLppPath" path="{lpp_path}"/>
-                            </RetryUntilSuccessful>
-                        </Control>
-                    </Timeout>
-                </Sequence>
-            </Fallback>
+                        <RetryUntilSuccessful num_attempts="2">
+                            <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="only_position_checker" path="{lpp_path}"/>
+                        </RetryUntilSuccessful>
+                    </Control>
+                </Timeout>
+            </Sequence>
         </RetryUntilSuccessful>
     </BehaviorTree>
     <!-- ////////// -->
@@ -103,8 +86,8 @@
             <input_port name="server_timeout">Server timeout</input_port>
         </Action>
         <Action ID="CheckFrontObstacle">
-            <input_port default="0.4" name="angle"/>
-            <input_port default="2.1" name="range"/>
+            <input_port name="angle"/>
+            <input_port name="range"/>
             <input_port default="0.5" name="rotate_threshold"/>
         </Action>
         <Action ID="CheckRobotOrientation">
@@ -199,7 +182,7 @@
             <input_port name="server_timeout">Server timeout</input_port>
         </Action>
         <SubTree ID="NavigateToLppPose">
-            <input_port default="false" name="__shared_blackboard">If false (default), the Subtree has an isolated blackboard and needs port remapping</input_port>
+            <input_port default="true" name="__shared_blackboard">If false (default), the Subtree has an isolated blackboard and needs port remapping</input_port>
         </SubTree>
         <Action ID="NavigateToPose">
             <input_port name="behavior_tree">Behavior tree to run</input_port>

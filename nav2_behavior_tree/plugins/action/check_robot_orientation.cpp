@@ -110,30 +110,42 @@ inline BT::NodeStatus CheckRobotOrientation::tick()
   double path_yaw = atan2(dy, dx);
 
   if (std::isnan(path_yaw) || std::isinf(path_yaw)) {
-    // RCLCPP_WARN(
-    //   config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
-    //   "Path angle is not valid while check robot orientation. return SUCCESS");
+    RCLCPP_WARN(
+      config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+      "Path angle is not valid while check robot orientation. return SUCCESS");
     return BT::NodeStatus::SUCCESS;
   }
 
   tf2::Quaternion q(
-    (*current_pose).pose.orientation.x,
-    (*current_pose).pose.orientation.y,
-    (*current_pose).pose.orientation.z,
-    (*current_pose).pose.orientation.w);
+    pose.pose.orientation.x,
+    pose.pose.orientation.y,
+    pose.pose.orientation.z,
+    pose.pose.orientation.w);
   tf2::Matrix3x3 m(q);
   double roll, pitch, yaw;
   m.getRPY(roll, pitch, yaw);
 
-  // RCLCPP_INFO(
-  //   config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
-  //   "CheckRobotOrientation:: path_yaw: %.2f, yaw: %.2f, threshold: %.2f", path_yaw, yaw, threshold_);
+  RCLCPP_DEBUG(
+    config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+    "[CheckRobotOrientation] current_pose orientation: (%.2f, %.2f, %.2f, %.2f)", 
+      pose.pose.orientation.x,
+      pose.pose.orientation.y,
+      pose.pose.orientation.z, 
+      pose.pose.orientation.w);
 
-  std::cout << "CheckRobotOrientation:: path_yaw: " << path_yaw <<", yaw: " << yaw << ", threshold: " << threshold_ << std::endl;
 
-  if (fabs(path_yaw - yaw) < threshold_) {
+
+
+  if (fabs(path_yaw - yaw) < threshold_ || fabs(path_yaw - yaw) > 6.28 - threshold_) {
+    RCLCPP_INFO(
+      config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+      "[CheckRobotOrientation] path_yaw: %.2f, yaw: %.2f, threshold: %.2f. return FAILURE", path_yaw, yaw, threshold_);
     return BT::NodeStatus::FAILURE;
   }
+
+  RCLCPP_INFO(
+    config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+    "[CheckRobotOrientation] path_yaw: %.2f, yaw: %.2f, threshold: %.2f. return SUCCESS", path_yaw, yaw, threshold_);
 
   return BT::NodeStatus::SUCCESS;
 }
@@ -144,9 +156,9 @@ inline bool CheckRobotOrientation::getRobotPose(
   if (!getInput("pose", pose)) {
     std::string robot_frame;
     if (!getInput("robot_frame", robot_frame)) {
-      // RCLCPP_ERROR(
-      //   config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
-      //   "Neither pose nor robot_frame specified for %s", name().c_str());
+      RCLCPP_ERROR(
+        config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+        "Neither pose nor robot_frame specified for %s", name().c_str());
       return false;
     }
     double transform_tolerance;
@@ -154,9 +166,9 @@ inline bool CheckRobotOrientation::getRobotPose(
     if (!nav2_util::getCurrentPose(
         pose, *tf_buffer_, path_frame_id, robot_frame, transform_tolerance))
     {
-      // RCLCPP_WARN(
-      //   config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
-      //   "Failed to lookup current robot pose for %s", name().c_str());
+      RCLCPP_WARN(
+        config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+        "Failed to lookup current robot pose for %s", name().c_str());
       return false;
     }
   }
