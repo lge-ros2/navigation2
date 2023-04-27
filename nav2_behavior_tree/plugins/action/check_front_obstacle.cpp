@@ -46,7 +46,7 @@ CheckFrontObstacle::CheckFrontObstacle(
   rclcpp::SubscriptionOptions sub_option;
   sub_option.callback_group = callback_group_;
   
-  rclcpp::QoS scan_qos(rclcpp::KeepLast(50));
+  rclcpp::QoS scan_qos(rclcpp::KeepLast(1));
   scan_qos.best_effort().durability_volatile();
 
   scan_sub_ = node_->create_subscription<sensor_msgs::msg::LaserScan>(
@@ -71,10 +71,12 @@ BT::NodeStatus CheckFrontObstacle::tick()
 
   // uninitialized scan data
   if (last_scan_msg_->angle_increment == 0.0) {
+    RCLCPP_ERROR(node_->get_logger(), "[CheckFrontObstacle] scan msg is not initialized. return SUCCESS");
     return BT::NodeStatus::SUCCESS;
   }
 
   if (last_cmd_vel_->angular.z < -1 * rotate_threshold_ || last_cmd_vel_->angular.z > rotate_threshold_) {
+    RCLCPP_DEBUG(node_->get_logger(), "[CheckFrontObstacle] rotation_velocity: %.2f. return SUCCESS", last_cmd_vel_->angular.z);
     return BT::NodeStatus::SUCCESS;
   }
 
@@ -85,11 +87,12 @@ BT::NodeStatus CheckFrontObstacle::tick()
     float angle = angle_min + angle_increment * i;
     if (angle > -1 * angle_ / 2 && angle < angle_ /2) {
       if (range > 0 && range < range_) {
-        RCLCPP_INFO(node_->get_logger(), "CheckFrontObstacle angle: %f, range: %f", angle, range);
+        RCLCPP_INFO(node_->get_logger(), "[CheckFrontObstacle] angle: %.2f, range: %.2f. rotation_vel: %.2f return FAILURE", angle, range, last_cmd_vel_->angular.z);
         return BT::NodeStatus::FAILURE;
       }
     }
   }
+  RCLCPP_DEBUG(node_->get_logger(), "[CheckFrontObstacle] cannot find obstacles. return SUCCESS. angle_: %.2f, range: %.2f", angle_, range_);
   return BT::NodeStatus::SUCCESS;
 
 }
