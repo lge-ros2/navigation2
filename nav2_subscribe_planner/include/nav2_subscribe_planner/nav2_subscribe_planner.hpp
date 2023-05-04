@@ -104,6 +104,15 @@ protected:
 
   nav_msgs::msg::Path path_;
 
+
+  bool path_pruning_;
+  nav_msgs::msg::Path::_poses_type::iterator closest_pose_detection_begin_;
+
+  static double poseDistance(
+    const geometry_msgs::msg::PoseStamped & pose1,
+    const geometry_msgs::msg::PoseStamped & pose2,
+    const double angular_distance_weight);
+
 };
 
 }  // namespace nav2_subscribe_planner
