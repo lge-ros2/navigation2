@@ -63,8 +63,7 @@ def generate_launch_description():
     param_substitutions = {
         'use_sim_time': use_sim_time,
         'default_nav_to_pose_bt_xml': default_nav_to_pose_bt_xml,
-        'autostart': autostart,
-        'topic': ('/', namespace, '/scan')}
+        'autostart': autostart}
 
     configured_params = RewrittenYaml(
             source_file=params_file,
