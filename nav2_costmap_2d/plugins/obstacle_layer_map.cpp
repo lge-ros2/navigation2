@@ -60,6 +60,8 @@ using rcl_interfaces::msg::ParameterType;
 namespace nav2_costmap_2d
 {
 
+char * ObstacleLayer::cost_translation_table_ = NULL;
+
 ObstacleLayer::~ObstacleLayer()
 {
   dyn_params_handler_.reset();
@@ -288,9 +290,25 @@ void ObstacleLayer::onInitialize()
 
   // [sungkyu.kang] create for obstacle index
   auto custom_qos2 = rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable();
-  obstacle_index_pub_ = node->create_publisher<std_msgs::msg::UInt32MultiArray>(
-    "obstacle_index",
+  obstacle_grid_pub_ = node->create_publisher<nav_msgs::msg::OccupancyGrid>(
+    "obstacle_map",
     custom_qos2);
+
+  if (cost_translation_table_ == NULL) {
+    cost_translation_table_ = new char[256];
+
+    // special values:
+    cost_translation_table_[0] = 0;  // NO obstacle
+    cost_translation_table_[253] = 99;  // INSCRIBED obstacle
+    cost_translation_table_[254] = 100;  // LETHAL obstacle
+    cost_translation_table_[255] = -1;  // UNKNOWN
+
+    // regular cost values scale the range 1 to 252 (inclusive) to fit
+    // into 1 to 98 (inclusive).
+    for (int i = 1; i < 253; i++) {
+      cost_translation_table_[i] = static_cast<char>(1 + (97 * (i - 1)) / 251);
+    }
+  }    
 }
 
 rcl_interfaces::msg::SetParametersResult
@@ -446,9 +464,6 @@ ObstacleLayer::updateBounds(
     raytraceFreespace(clearing_observations[i], min_x, min_y, max_x, max_y);
   }
 
-  // [sungkyu.kang] prepare msg for obstacle index
-  obstacle_index_ = std::make_unique<std_msgs::msg::UInt32MultiArray>();
-  unsigned int pre_index = -1;
   // place the new obstacles into a priority queue... each with a priority of zero to begin with
   for (std::vector<Observation>::const_iterator it = observations.begin();
     it != observations.end(); ++it)
@@ -507,11 +522,6 @@ ObstacleLayer::updateBounds(
 
       unsigned int index = getIndex(mx, my);
       costmap_[index] = LETHAL_OBSTACLE;
-      if (pre_index != index) {
-      // RCLCPP_INFO(logger_, "[ObstacleLayer] index: %d. (%d, %d)", index, mx, my);
-        pre_index = index;
-        obstacle_index_->data.push_back(index);
-      }
 
       touch(px, py, min_x, min_y, max_x, max_y);
     }
@@ -519,12 +529,6 @@ ObstacleLayer::updateBounds(
 
   updateFootprint(robot_x, robot_y, robot_yaw, min_x, min_y, max_x, max_y);
 
-  // [sungkyu.kang] publish obstacle index
-  if (obstacle_index_pub_->get_subscription_count() > 0) {
-    obstacle_index_pub_->publish(std::move(obstacle_index_));
-    RCLCPP_DEBUG(logger_, "[ObstacleLayer] Publish Obstacle Index");
-  }
-  
 }
 
 void
@@ -573,7 +577,47 @@ ObstacleLayer::updateCosts(
     default:  // Nothing
       break;
   }
+
+  // [zikprid] publish current master grid
+  if (obstacle_grid_pub_->get_subscription_count() > 0) {
+    prepareGrid(master_grid);
+    obstacle_grid_pub_->publish(std::move(grid_));
+  }
+
 }
+
+void ObstacleLayer::prepareGrid(nav2_costmap_2d::Costmap2D costmap)
+{
+  std::unique_lock<Costmap2D::mutex_t> lock(*(costmap.getMutex()));
+  float grid_resolution = costmap.getResolution();
+  unsigned int grid_width = costmap.getSizeInCellsX();
+  unsigned int grid_height = costmap.getSizeInCellsY();
+
+  grid_ = std::make_unique<nav_msgs::msg::OccupancyGrid>();
+
+  grid_->header.frame_id = global_frame_;
+  grid_->header.stamp = clock_->now();
+
+  grid_->info.resolution = grid_resolution;
+
+  grid_->info.width = grid_width;
+  grid_->info.height = grid_height;
+
+  double wx, wy;
+  costmap.mapToWorld(0, 0, wx, wy);
+  grid_->info.origin.position.x = wx - grid_resolution / 2;
+  grid_->info.origin.position.y = wy - grid_resolution / 2;
+  grid_->info.origin.position.z = 0.0;
+  grid_->info.origin.orientation.w = 1.0;
+
+  grid_->data.resize(grid_->info.width * grid_->info.height);
+
+  unsigned char * data = costmap.getCharMap();
+  for (unsigned int i = 0; i < grid_->data.size(); i++) {
+    grid_->data[i] = cost_translation_table_[data[i]];
+  }
+}
+
 
 void
 ObstacleLayer::addStaticObservation(

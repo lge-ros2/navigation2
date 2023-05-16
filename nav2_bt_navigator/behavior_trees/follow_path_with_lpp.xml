@@ -6,18 +6,18 @@
             <Sequence>
                 <Action ID="ClearEntireCostmap" name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
                 <Control ID="PipelineSequence" name="NavigateWithReplanning">
-                    <Control ID="RateController" hz="1.0">
+                    <Decorator ID="RateController" hz="1.0">
                         <Action ID="ComputePathToPose" goal="{goal}" path="{path}" planner_id="TopicBased"/>
-                    </Control>
-                    <Control ID="RateController" hz="10">
-                        <Control ID="RecoveryNode" number_of_retries="1">
+                    </Decorator>
+                    <Decorator ID="RateController" hz="1.0" name="RateControllerObstacle">
+                        <Control ID="RecoveryNode" name="RecoveryNodeObstacle" number_of_retries="1">
                             <Fallback>
-                                <Action ID="CheckFrontObstacle" angle="0.4" range="2.1" rotate_threshold="0.5"/>
-                                <Action ID="CheckRobotOrientation" path="{path}" threshold="1.0"/>
+                                <Action ID="CheckFrontObstacle" angle="0.2" range="1.5" rotate_threshold="0.5"/>
+                                <Action ID="CheckRobotOrientation" path="{path}" threshold="1.0" distance_threshold="1.5" distance_forward="2.0"/>
                             </Fallback>
-                            <Action ID="Wait" wait_duration="1"/>
+                            <Action ID="Wait" name="WaitForObstacle" wait_duration="1"/>
                         </Control>
-                    </Control>
+                    </Decorator>
                     <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="general_goal_checker" path="{path}"/>
                 </Control>
             </Sequence>
@@ -26,38 +26,41 @@
     </BehaviorTree>
     <!-- ////////// -->
     <BehaviorTree ID="NavigateToLppPose">
-        <RetryUntilSuccessful num_attempts="100">
-            <Fallback>
-                <Parallel failure_threshold="1" success_threshold="1">
-                    <RetryUntilSuccessful num_attempts="100">
-                        <Repeat num_cycles="1">
-                            <Sequence>
-                                <Action ID="Wait" wait_duration="1"/>
-                                <Action ID="CheckFrontObstacle" angle="1.57" name="CheckFrontObstacleWhileLpp" range="2.1" rotate_threshold="1.0"/>
-                            </Sequence>
-                        </Repeat>
-                    </RetryUntilSuccessful>
-                    <Inverter>
-                        <Control ID="RateController" hz="10">
-                            <Action ID="RequestTriggerLpp" lpp_duration="{lpp_duration}"/>
-                        </Control>
-                    </Inverter>
-                </Parallel>
-                <Sequence>
-                    <Action ID="SetLppGoal" lpp_duration="{lpp_duration}" lpp_goal="{lpp_goal}" path="{path}"/>
-                    <Timeout msec="{lpp_duration}" name="FollowLPPTimeout">
-                        <Control ID="PipelineSequence">
-                            <Control ID="RateController" hz="1.0">
-                                <Action ID="ComputePathToPose" goal="{lpp_goal}" name="ComputePathToLppGoal" path="{lpp_path}" planner_id="GridBased"/>
+        <Sequence>
+            <RetryUntilSuccessful num_attempts="100">
+                <Fallback name="FallbackLpp">
+                    <Parallel failure_threshold="1" name="ParallelLpp" success_threshold="1">
+                        <RetryUntilSuccessful num_attempts="100">
+                            <Repeat num_cycles="1">
+                                <Sequence>
+                                    <Action ID="Wait" wait_duration="1"/>
+                                    <Action ID="CheckFrontObstacle" angle="1.57" name="CheckFrontObstacleWhileLpp" range="2.1" rotate_threshold="1.0"/>
+                                </Sequence>
+                            </Repeat>
+                        </RetryUntilSuccessful>
+                        <Inverter>
+                            <Decorator ID="RateController" hz="10">
+                                <Action ID="RequestTriggerLpp" lpp_duration="{lpp_duration}"/>
+                            </Decorator>
+                        </Inverter>
+                    </Parallel>
+                    <Sequence>
+                        <Action ID="SetLppGoal" lpp_duration="{lpp_duration}" lpp_goal="{lpp_goal}" path="{path}"/>
+                        <Timeout msec="{lpp_duration}" name="FollowLPPTimeout">
+                            <Control ID="PipelineSequence">
+                                <Decorator ID="RateController" hz="1.0" name="RateControllerComputeLppPath">
+                                    <Action ID="ComputePathToPose" goal="{lpp_goal}" name="ComputePathToLppGoal" path="{lpp_path}" planner_id="GridBased"/>
+                                </Decorator>
+                                <RetryUntilSuccessful num_attempts="3">
+                                    <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="only_position_checker" name="FollowLppPath" path="{lpp_path}"/>
+                                </RetryUntilSuccessful>
                             </Control>
-                            <RetryUntilSuccessful num_attempts="3">
-                                <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="only_position_checker" name="FollowLppPath" path="{lpp_path}"/>
-                            </RetryUntilSuccessful>
-                        </Control>
-                    </Timeout>
-                </Sequence>
-            </Fallback>
-        </RetryUntilSuccessful>
+                        </Timeout>
+                    </Sequence>
+                </Fallback>
+            </RetryUntilSuccessful>
+            <Action ID="SendLppEnd"/>
+        </Sequence>
     </BehaviorTree>
     <!-- ////////// -->
     <TreeNodesModel>
@@ -110,6 +113,8 @@
         <Action ID="CheckRobotOrientation">
             <input_port default="{path}" name="path"/>
             <input_port default="1.0" name="threshold"/>
+            <input_port default="1.5" name="distance_threshold"/>
+            <input_port default="2.0" name="distance_forward"/>
         </Action>
         <Action ID="ClearCostmapAroundRobot">
             <input_port name="reset_distance">Distance from the robot under which obstacles are cleared</input_port>
@@ -199,7 +204,7 @@
             <input_port name="server_timeout">Server timeout</input_port>
         </Action>
         <SubTree ID="NavigateToLppPose">
-            <input_port default="false" name="__shared_blackboard">If false (default), the Subtree has an isolated blackboard and needs port remapping</input_port>
+            <input_port default="true" name="__shared_blackboard">If false (default), the Subtree has an isolated blackboard and needs port remapping</input_port>
         </SubTree>
         <Action ID="NavigateToPose">
             <input_port name="behavior_tree">Behavior tree to run</input_port>
@@ -222,9 +227,9 @@
             <output_port name="selected_planner">Name of the selected planner received from the topic subcription</output_port>
             <input_port name="topic_name">Name of the topic to receive planner selection commands</input_port>
         </Action>
-        <Control ID="RateController">
+        <Decorator ID="RateController">
             <input_port default="1.0" name="hz"/>
-        </Control>
+        </Decorator>
         <Control ID="RecoveryNode">
             <input_port default="10" name="number_of_retries"/>
         </Control>
@@ -243,6 +248,7 @@
             <output_port default="{lpp_duration}" name="lpp_duration"/>
         </Action>
         <Control ID="RoundRobin"/>
+        <Action ID="SendLppEnd"/>
         <Action ID="SetLppGoal">
             <input_port default="{lpp_duration}" name="lpp_duration"/>
             <output_port default="{lpp_goal}" name="lpp_goal"/>

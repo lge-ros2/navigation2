@@ -12,8 +12,8 @@
                     <Control ID="RateController" hz="10">
                         <Control ID="RecoveryNode" number_of_retries="1">
                             <Fallback>
-                                <Action ID="CheckFrontObstacle" angle="0.4" range="2.1" rotate_threshold="0.5"/>
-                                <Action ID="CheckRobotOrientation" path="{path}" threshold="1.0"/>
+                                <Action ID="CheckFrontObstacle" angle="0.2" range="1.5" rotate_threshold="0.5"/>
+                                <Action ID="CheckRobotOrientation" path="{path}" threshold="1.0" distance_threshold="1.5" distance_forward="2.0"/>
                             </Fallback>
                             <Action ID="Wait" wait_duration="1"/>
                         </Control>
@@ -28,8 +28,8 @@
     <BehaviorTree ID="NavigateToLppPose">
         <RetryUntilSuccessful num_attempts="100">
             <Sequence>
-                <Action ID="SetLppGoal" lpp_duration="1000" lpp_goal="{lpp_goal}" path="{path}"/>
-                <Timeout msec="1000">
+                <Action ID="SetLppGoal" lpp_duration="5000" lpp_goal="{lpp_goal}" path="{path}"/>
+                <Timeout msec="10000">
                     <Control ID="PipelineSequence">
                         <Control ID="RateController" hz="1.0">
                             <Action ID="ComputePathToPose" goal="{lpp_goal}" path="{lpp_path}" planner_id="GridBased"/>
@@ -86,8 +86,8 @@
             <input_port name="server_timeout">Server timeout</input_port>
         </Action>
         <Action ID="CheckFrontObstacle">
-            <input_port name="angle"/>
-            <input_port name="range"/>
+            <input_port default="0.4" name="angle"/>
+            <input_port default="2.1" name="range"/>
             <input_port default="0.5" name="rotate_threshold"/>
         </Action>
         <Action ID="CheckRobotOrientation">
@@ -205,9 +205,9 @@
             <output_port name="selected_planner">Name of the selected planner received from the topic subcription</output_port>
             <input_port name="topic_name">Name of the topic to receive planner selection commands</input_port>
         </Action>
-        <Control ID="RateController">
+        <Decorator ID="RateController">
             <input_port default="1.0" name="hz"/>
-        </Control>
+        </Decorator>
         <Control ID="RecoveryNode">
             <input_port default="10" name="number_of_retries"/>
         </Control>
@@ -226,6 +226,7 @@
             <output_port default="{lpp_duration}" name="lpp_duration"/>
         </Action>
         <Control ID="RoundRobin"/>
+        <Action ID="SendLppEnd"/>
         <Action ID="SetLppGoal">
             <input_port default="{lpp_duration}" name="lpp_duration"/>
             <output_port default="{lpp_goal}" name="lpp_goal"/>
