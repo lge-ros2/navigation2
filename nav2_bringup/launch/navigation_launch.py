@@ -19,7 +19,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction, SetEnvironmentVariable
 from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.substitutions import LaunchConfiguration, PythonExpression, TextSubstitution
 from launch_ros.actions import LoadComposableNodes
 from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode
@@ -63,7 +63,8 @@ def generate_launch_description():
     param_substitutions = {
         'use_sim_time': use_sim_time,
         'default_nav_to_pose_bt_xml': default_nav_to_pose_bt_xml,
-        'autostart': autostart}
+        'autostart': autostart,
+        'topic': ('/', namespace, '/scan')}
 
     configured_params = RewrittenYaml(
             source_file=params_file,
@@ -110,7 +111,7 @@ def generate_launch_description():
         description='log level')
 
     declare_nav_to_pose_bt_xml_cmd = DeclareLaunchArgument(
-        'default_nav_to_pose_bt_xml', default_value=os.path.join(bt_navigator_dir, 'behavior_trees', 'navigate_to_pose_w_replanning_and_recovery.xml'),
+        'default_nav_to_pose_bt_xml', default_value=os.path.join(bt_navigator_dir, 'behavior_trees', 'follow_path_with_lpp.xml'),
         description='Whether to respawn if a node crashes. Applied when composition is disabled.')
 
     load_nodes = GroupAction(

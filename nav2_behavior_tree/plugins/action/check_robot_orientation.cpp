@@ -43,14 +43,17 @@ inline BT::NodeStatus CheckRobotOrientation::tick()
 {
   setStatus(BT::NodeStatus::RUNNING);
 
-  double distance_forward = 3.0;
   geometry_msgs::msg::PoseStamped pose;
   double angular_distance_weight;
   double max_robot_pose_search_dist;
+  double distance_forward;
+  double distance_threshold;
   
   getInput("angular_distance_weight", angular_distance_weight);
   getInput("max_robot_pose_search_dist", max_robot_pose_search_dist);
   getInput("threshold", threshold_);
+  getInput("distance_forward", distance_forward);
+  getInput("distance_threshold", distance_threshold);
 
   bool path_pruning = std::isfinite(max_robot_pose_search_dist);
   nav_msgs::msg::Path new_path;
@@ -86,6 +89,17 @@ inline BT::NodeStatus CheckRobotOrientation::tick()
     closest_pose_detection_begin_ = current_pose;
   }
 
+  double dx0 = path_.poses[path_.poses.size()-1].pose.position.x - current_pose->pose.position.x;
+  double dy0 = path_.poses[path_.poses.size()-1].pose.position.y - current_pose->pose.position.y;
+  double distance = std::sqrt(dx0 * dx0 + dy0 * dy0);
+
+  if (distance < distance_threshold) {
+    RCLCPP_INFO(
+    config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+    "[CheckRobotOrientation] distance: %.2f, distance_threshold: %.2f. return SUCCESS", distance, distance_threshold);
+    return BT::NodeStatus::SUCCESS;
+  }  
+
   // expand forwards to extract desired length
   auto forward_pose_it = nav2_util::geometry_utils::first_after_integrated_distance(
     current_pose, path_.poses.end(), distance_forward);
@@ -104,8 +118,8 @@ inline BT::NodeStatus CheckRobotOrientation::tick()
     return BT::NodeStatus::SUCCESS;
   }
 
-  double dx = output_path.poses[1].pose.position.x - output_path.poses[0].pose.position.x;
-  double dy = output_path.poses[1].pose.position.y - output_path.poses[0].pose.position.y;
+  double dx = output_path.poses[output_path.poses.size()-1].pose.position.x - output_path.poses[0].pose.position.x;
+  double dy = output_path.poses[output_path.poses.size()-1].pose.position.y - output_path.poses[0].pose.position.y;
 
   double path_yaw = atan2(dy, dx);
 
@@ -132,9 +146,6 @@ inline BT::NodeStatus CheckRobotOrientation::tick()
       pose.pose.orientation.y,
       pose.pose.orientation.z, 
       pose.pose.orientation.w);
-
-
-
 
   if (fabs(path_yaw - yaw) < threshold_ || fabs(path_yaw - yaw) > 6.28 - threshold_) {
     RCLCPP_INFO(

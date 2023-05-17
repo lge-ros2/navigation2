@@ -87,7 +87,7 @@ BT::NodeStatus RequestTriggerLpp::tick()
     getInput("path", path_);
 
     auto status_message = std_msgs::msg::String();
-    status_message.data = "status";
+    status_message.data = "start";
     status_pub_->publish(status_message);
     last_trigger_duration_ = 0.0;
     send_request_ = false;
