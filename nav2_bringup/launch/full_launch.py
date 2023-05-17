@@ -137,6 +137,7 @@ def generate_launch_description():
                               'params_file': params_file,
                               'use_composition': use_composition,
                               'use_respawn': use_respawn,
+                              'default_nav_to_pose_bt_xml': default_nav_to_pose_bt_xml,
                               'container_name': 'nav2_container'}.items()),
 
         IncludeLaunchDescription(

@@ -1495,7 +1495,6 @@ AmclNode::initMessageFilters()
     get_node_clock_interface(),
     transform_tolerance_);
 
-
   laser_scan_connection_ = laser_scan_filter_->registerCallback(
     std::bind(
       &AmclNode::laserReceived,

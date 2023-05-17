@@ -55,6 +55,12 @@ public:
         "robot_frame", "base_link",
         "Robot base frame id"),
       BT::InputPort<double>(
+        "distance_forward", 2.0,
+        "forward distance for check orientation of path"),
+      BT::InputPort<double>(
+        "distance_threshold", 1.5,
+        "distance threshold ignoreing by remaining path distance"),
+      BT::InputPort<double>(
         "transform_tolerance", 0.2,
         "Transform lookup tolerance"),
       BT::InputPort<geometry_msgs::msg::PoseStamped>(
