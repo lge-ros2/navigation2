@@ -75,8 +75,8 @@ SubscribePlanner::configure(
 
   // Initialize parameters
   // Declare this plugin's parameters
-  declare_parameter_if_not_declared(node, name + ".topic", rclcpp::ParameterValue("plan"));
-  node->get_parameter(name + ".topic", topic_name_);
+  declare_parameter_if_not_declared(node, name + ".plan_topic", rclcpp::ParameterValue("fms_plan"));
+  node->get_parameter(name + ".plan_topic", topic_name_);
 
   declare_parameter_if_not_declared(node, name + ".path_pruning", rclcpp::ParameterValue(true));
   node->get_parameter(name + ".path_pruning", path_pruning_);
