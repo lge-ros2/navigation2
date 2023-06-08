@@ -130,7 +130,8 @@ void GlobalObstacleLayer::onInitialize()
     // regular cost values scale the range 1 to 252 (inclusive) to fit
     // into 1 to 98 (inclusive).
     for (int i = 1; i < 253; i++) {
-      cost_translation_table_[i] = static_cast<char>(1 + (97 * (i - 1)) / 251);
+      // cost_translation_table_[i] = static_cast<char>(1 + (97 * (i - 1)) / 251);
+      cost_translation_table_[i] = FREE_SPACE;
     }
   }
 }
