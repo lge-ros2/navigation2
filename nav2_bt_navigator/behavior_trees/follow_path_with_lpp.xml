@@ -28,7 +28,7 @@
                 <Action ID="Wait" name="WaitBeforeLpp" wait_duration="2"/>
                 <Fallback name="FallbackBeforeLpp">
                     <Condition ID="GoalUpdated" name="GoalUpdatedBeforeLpp"/>
-                    <Action ID="CheckFrontObstacle" angle="0.2" name="CheckFrontObstacleBeforeLpp" range="1.5" rotate_threshold="0.5"/>
+                    <Action ID="CheckFrontObstacle" angle="0.4" name="CheckFrontObstacleBeforeLpp" range="1.5" rotate_threshold="0.5"/>
                 </Fallback>
             </Sequence>
             <Sequence name="TopSequenceLpp">
