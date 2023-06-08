@@ -12,7 +12,7 @@
                     <Decorator ID="RateController" hz="1.0" name="RateControllerObstacle">
                         <Fallback>
                             <Action ID="CheckFrontObstacle" angle="0.2" range="1.5" rotate_threshold="0.5"/>
-                            <Action ID="CheckRobotOrientation" distance_forward="2.0" distance_threshold="1.5" path="{path}" threshold="1.0"/>
+                            <Action ID="CheckRobotOrientation" distance_forward="2.0" distance_threshold="1.5" path="{path}" threshold="0.5"/>
                         </Fallback>
                     </Decorator>
                     <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="general_goal_checker" path="{path}"/>
@@ -25,7 +25,7 @@
     <BehaviorTree ID="NavigateToLppPose">
         <Fallback>
             <Sequence name="SequenceBeforeLpp">
-                <Action ID="Wait" name="WaitBeforeLpp" wait_duration="2"/>
+                <Action ID="Wait" name="WaitBeforeLpp" wait_duration="5"/>
                 <Fallback name="FallbackBeforeLpp">
                     <Condition ID="GoalUpdated" name="GoalUpdatedBeforeLpp"/>
                     <Action ID="CheckFrontObstacle" angle="0.66" name="CheckFrontObstacleBeforeLpp" range="1.5" rotate_threshold="0.5"/>
