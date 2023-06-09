@@ -125,6 +125,8 @@ void GlobalObstacleLayer::onInitialize()
   declareParameter(name_ + "." + "rotate_threshold", rclcpp::ParameterValue(0.17));
   node->get_parameter(name_ + "." + "rotate_threshold", rotate_threshold_);
 
+  RCLCPP_INFO(logger_, "    GlobalObstacleLayer cmd_vel_topic: %s", cmd_vel_topic_string.c_str());
+  RCLCPP_INFO(logger_, "    GlobalObstacleLayer rotate_threshold: %.2f", rotate_threshold_);
   cmd_vel_sub_ = node->create_subscription<geometry_msgs::msg::Twist>(
     cmd_vel_topic_string, rclcpp::SystemDefaultsQoS(),
     std::bind(&GlobalObstacleLayer::cmdVelCallback, this, std::placeholders::_1));
@@ -148,9 +150,9 @@ void GlobalObstacleLayer::onInitialize()
 }
 
 void 
-cmdVelCallback(const geometry_msgs::msg::Twist::ConstSharedPtr message)
+GlobalObstacleLayer::cmdVelCallback(const geometry_msgs::msg::Twist::ConstSharedPtr message)
 {
-  last_rotate_vel_ = fabs(message.angular.z);
+  last_rotate_vel_ = fabs(message->angular.z);
 }
 
 void
