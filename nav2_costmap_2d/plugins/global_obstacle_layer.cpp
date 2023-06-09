@@ -118,6 +118,17 @@ void GlobalObstacleLayer::onInitialize()
     "obstacle_map",
     custom_qos2);
 
+  std::string cmd_vel_topic_string;
+  declareParameter(name_ + "." + "cmd_vel_topic", rclcpp::ParameterValue("/cmd_vel"));
+  node->get_parameter(name_ + "." + "cmd_vel_topic", cmd_vel_topic_string);
+
+  declareParameter(name_ + "." + "rotate_threshold", rclcpp::ParameterValue(0.17));
+  node->get_parameter(name_ + "." + "rotate_threshold", rotate_threshold_);
+
+  cmd_vel_sub_ = node->create_subscription<geometry_msgs::msg::Twist>(
+    cmd_vel_topic_string, rclcpp::SystemDefaultsQoS(),
+    std::bind(&GlobalObstacleLayer::cmdVelCallback, this, std::placeholders::_1));
+
   if (cost_translation_table_ == NULL) {
     cost_translation_table_ = new char[256];
 
@@ -134,6 +145,12 @@ void GlobalObstacleLayer::onInitialize()
       cost_translation_table_[i] = FREE_SPACE;
     }
   }
+}
+
+void 
+cmdVelCallback(const geometry_msgs::msg::Twist::ConstSharedPtr message)
+{
+  last_rotate_vel_ = fabs(message.angular.z);
 }
 
 void
@@ -190,7 +207,7 @@ GlobalObstacleLayer::laserScanValidInfCallback(
   if (!is_init_scan_angle_) {
     initializeScanAngle(raw_message);
   }
-  laserScanValidInfCallback(raw_message, buffer);
+  ObstacleLayer::laserScanValidInfCallback(raw_message, buffer);
 }
 
 void GlobalObstacleLayer::updateRobotYaw(const double robot_yaw)
@@ -221,6 +238,11 @@ void GlobalObstacleLayer::updateCosts(
   ObstacleLayer::updateCosts(master_grid, min_i, min_j, max_i, max_j);
 
   // [sungkyu.kang] publish current master grid
+  if (last_rotate_vel_ > rotate_threshold_) {
+    RCLCPP_INFO(logger_, "    do not publish obstaclesmap. last_rotate_vel_: %f, rotate_threshold_: %f", last_rotate_vel_, rotate_threshold_);
+    return;
+  }
+
   if (publish_cycle_ > rclcpp::Duration(0, 0) && obstacle_grid_pub_->get_subscription_count() > 0) {
     const auto current_time = clock_->now();
     if ((last_publish_ + publish_cycle_ < current_time) ||  // publish_cycle_ is due
