@@ -113,18 +113,20 @@ void GlobalVoxelLayer::onInitialize()
     "obstacle_map",
     custom_qos2);
 
-  std::string cmd_vel_topic_string;
+  std::string cmd_vel_topic_string = "/base_controller/cmd_vel_unstamped";
   declareParameter(name_ + "." + "cmd_vel_topic", rclcpp::ParameterValue("/cmd_vel"));
   node->get_parameter(name_ + "." + "cmd_vel_topic", cmd_vel_topic_string);
 
+  rotate_threshold_ = 0.17;
   declareParameter(name_ + "." + "rotate_threshold", rclcpp::ParameterValue(0.17));
   node->get_parameter(name_ + "." + "rotate_threshold", rotate_threshold_);
 
-  RCLCPP_INFO(logger_, "    GlobalObstacleLayer cmd_vel_topic: %s", cmd_vel_topic_string.c_str());
-  RCLCPP_INFO(logger_, "    GlobalObstacleLayer rotate_threshold: %.2f", rotate_threshold_);
+
+  RCLCPP_INFO(logger_, "    GlobalVoxelLayer cmd_vel_topic: %s", cmd_vel_topic_string.c_str());
+  RCLCPP_INFO(logger_, "    GlobalVoxelLayer rotate_threshold: %.2f", rotate_threshold_);
   cmd_vel_sub_ = node->create_subscription<geometry_msgs::msg::Twist>(
     cmd_vel_topic_string, rclcpp::SystemDefaultsQoS(),
-    std::bind(&GlobalObstacleLayer::cmdVelCallback, this, std::placeholders::_1));
+    std::bind(&GlobalVoxelLayer::cmdVelCallback, this, std::placeholders::_1));
 
   if (cost_translation_table_ == NULL) {
     cost_translation_table_ = new char[256];
