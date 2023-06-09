@@ -39,6 +39,7 @@
 #define NAV2_COSTMAP_2D__GLOBAL_VOXEL_LAYER_HPP_
 
 #include "nav2_costmap_2d/voxel_layer.hpp"
+#include "geometry_msgs/msg/twist.hpp"
 
 namespace nav2_costmap_2d
 {
@@ -105,8 +106,11 @@ public:
     sensor_msgs::msg::LaserScan::ConstSharedPtr message,
     const std::shared_ptr<nav2_costmap_2d::ObservationBuffer> & buffer);
 
+  void cmdVelCallback(const geometry_msgs::msg::Twist::ConstSharedPtr message);
+
 protected:
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr obstacle_grid_pub_;
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
   std::unique_ptr<nav_msgs::msg::OccupancyGrid> grid_;
 
   bool is_init_scan_angle_;
@@ -115,6 +119,8 @@ protected:
   double scan_end_angle_;
   float scan_link_offset_;
   double current_robot_yaw_;
+  double last_rotate_vel_;
+  double rotate_threshold_;
   static char * cost_translation_table_;
   rclcpp::Time last_publish_{0, 0, RCL_ROS_TIME};
   rclcpp::Duration publish_cycle_{1, 0};
