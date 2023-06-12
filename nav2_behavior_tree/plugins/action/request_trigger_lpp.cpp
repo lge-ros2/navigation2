@@ -80,6 +80,12 @@ BT::NodeStatus RequestTriggerLpp::tick()
   } else {
     // std_msgs::msg::Float32 new_duration;
     // new_duration.data = last_trigger_duration_;
+    RCLCPP_INFO(node_->get_logger(), "RequestTriggerLpp get lpp duration topic: %f", last_trigger_duration_);
+    if (last_trigger_duration_ < 0.0) {
+      last_trigger_duration_ = 0.0;
+      send_request_ = false;
+      return BT::NodeStatus::FAILURE;
+    }
     setOutput("lpp_duration", (unsigned int)(last_trigger_duration_*1000));
     RCLCPP_INFO(node_->get_logger(), "RequestTriggerLpp lpp_duration: %f", last_trigger_duration_);
     nav_msgs::msg::Path path_;
