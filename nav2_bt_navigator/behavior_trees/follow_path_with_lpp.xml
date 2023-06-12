@@ -31,35 +31,30 @@
                     <Action ID="CheckFrontObstacle" angle="0.66" name="CheckFrontObstacleBeforeLpp" range="1.5" rotate_threshold="0.15"/>
                 </Fallback>
             </Sequence>
-            <Sequence name="TopSequenceLpp">
-                <RetryUntilSuccessful num_attempts="100">
-                    <Fallback name="FallbackLpp">
-                        <Condition ID="GoalUpdated" name="GoalUpdatedBefore"/>
-                        <Sequence name="LppSequence">
-                            <Decorator ID="RateController" hz="10">
-                                <Action ID="RequestTriggerLpp" lpp_duration="{lpp_duration}"/>
-                            </Decorator>
-                            <Action ID="SetLppGoal" lpp_duration="{lpp_duration}" lpp_goal="{lpp_goal}" path="{path}" duration_distance_factor="10.0"/>
-                            <ReactiveFallback>
-                                <Condition ID="GoalUpdated" name="GoalUpdatedWhileLpp"/>
-                                <Timeout msec="{lpp_duration}" name="FollowLPPTimeout">
-                                    <Control ID="PipelineSequence">
-                                        <Decorator ID="RateController" hz="1.0" name="RateControllerComputeLppPath">
-                                            <Action ID="ComputePathToPose" goal="{lpp_goal}" name="ComputePathToLppGoal" path="{lpp_path}" planner_id="GridBased"/>
-                                        </Decorator>
-                                        <Control ID="RecoveryNode" number_of_retries="4">
-                                            <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="only_position_checker" name="FollowLppPath" path="{lpp_path}"/>
-                                            <Action ID="Spin" spin_dist="1.57"/>
-                                        </Control>
-                                    </Control>
-                                </Timeout>
-                                <Action ID="CheckFrontObstacle" angle="0.66" name="CheckFrontObstacleAfterLpp" range="1.5" rotate_threshold="0.15"/>
-                            </ReactiveFallback>
-                            <Action ID="SendLppEnd"/>
-                        </Sequence>
-                    </Fallback>
-                </RetryUntilSuccessful>
-            </Sequence>
+            <Inverter>
+                <Action ID="RequestTriggerLpp" lpp_duration="{lpp_duration}"/>
+            </Inverter>
+            <RetryUntilSuccessful num_attempts="100">
+                <Sequence>
+                    <Action ID="SetLppGoal" lpp_duration="{lpp_duration}" lpp_goal="{lpp_goal}" path="{path}"/>
+                    <ReactiveFallback>
+                        <Condition ID="GoalUpdated" name="GoalUpdatedWhileLpp"/>
+                        <Timeout msec="{lpp_duration}" name="FollowLPPTimeout">
+                            <Control ID="PipelineSequence">
+                                <Decorator ID="RateController" hz="1.0" name="RateControllerComputeLppPath">
+                                    <Action ID="ComputePathToPose" goal="{lpp_goal}" name="ComputePathToLppGoal" path="{lpp_path}" planner_id="GridBased"/>
+                                </Decorator>
+                                <Control ID="RecoveryNode" number_of_retries="4">
+                                    <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="only_position_checker" name="FollowLppPath" path="{lpp_path}"/>
+                                    <Action ID="Spin" spin_dist="1.57"/>
+                                </Control>
+                            </Control>
+                        </Timeout>
+                        <Action ID="CheckFrontObstacle" angle="0.66" name="CheckFrontObstacleAfterLpp" range="1.5" rotate_threshold="0.15"/>
+                    </ReactiveFallback>
+                    <Action ID="SendLppEnd"/>
+                </Sequence>
+            </RetryUntilSuccessful>
         </Fallback>
     </BehaviorTree>
     <!-- ////////// -->
@@ -138,7 +133,6 @@
             <input_port name="goal">Destination to plan to</input_port>
             <output_port name="path">Path created by ComputePathToPose node</output_port>
             <input_port name="planner_id">Mapped name to the planner plugin type to use</input_port>
-            <input_port name="server_name">Server name</input_port>
         </Action>
         <Action ID="ControllerSelector">
             <input_port name="default_controller">Default controller of the controller selector</input_port>
@@ -296,8 +290,6 @@
             <output_port name="output_path">Truncated path to utilize</output_port>
         </Action>
         <Action ID="Wait">
-            <input_port name="server_name">Server name</input_port>
-            <input_port name="server_timeout">Server timeout</input_port>
             <input_port name="wait_duration">Wait time</input_port>
         </Action>
         <Condition ID="WouldAControllerRecoveryHelp">
