@@ -59,6 +59,7 @@ void GlobalVoxelLayer::onInitialize()
   // The topics that we'll subscribe to from the parameter server
   std::string topics_string;
   node->get_parameter(name_ + "." + "observation_sources", topics_string);
+  std::string cmd_vel_topic_string = "/cmd_vel";
 
   // now we need to split the topics based on whitespace which we can use a stringstream for
   std::stringstream ss(topics_string);
@@ -68,15 +69,23 @@ void GlobalVoxelLayer::onInitialize()
     std::string data_type;
     bool inf_is_valid;
     double publish_cycle;
+    std::string cmd_vel_topic;
+    double rotate_threshold;
+
     declareParameter(source + "." + "init_scan_angle", rclcpp::ParameterValue(true));
     declareParameter(source + "." + "scan_link_offset", rclcpp::ParameterValue(2.0));
     declareParameter(source + "." + "publish_cycle", rclcpp::ParameterValue(1.0));
+    declareParameter(source + "." + "cmd_vel_topic", rclcpp::ParameterValue("/cmd_vel"));
+    declareParameter(source + "." + "rotate_threshold", rclcpp::ParameterValue(0.17));
 
     node->get_parameter(name_ + "." + source + "." + "data_type", data_type);
     node->get_parameter(name_ + "." + source + "." + "inf_is_valid", inf_is_valid);
     node->get_parameter(name_ + "." + source + "." + "init_scan_angle", init_scan_angle);
     node->get_parameter(name_ + "." + source + "." + "scan_link_offset", scan_link_offset_);
     node->get_parameter(name_ + "." + source + "." + "publish_cycle", publish_cycle);
+    node->get_parameter(name_ + "." + source + "." + "scan_link_offset", scan_link_offset_);
+    node->get_parameter(name_ + "." + source + "." + "cmd_vel_topic", cmd_vel_topic);
+    node->get_parameter(name_ + "." + source + "." + "rotate_threshold", rotate_threshold);
 
     if (publish_cycle > 0) {
       rclcpp::Duration::from_seconds(publish_cycle);
@@ -103,6 +112,8 @@ void GlobalVoxelLayer::onInitialize()
 
     // [sungkyu.kang] initialize use_init_scan_angle_ parameter
     use_init_scan_angle_ = init_scan_angle;
+    cmd_vel_topic_string = cmd_vel_topic;
+    rotate_threshold_ = rotate_threshold;
   }
 
   // [sungkyu.kang] create for obstacle index
@@ -112,15 +123,6 @@ void GlobalVoxelLayer::onInitialize()
   obstacle_grid_pub_ = node->create_publisher<nav_msgs::msg::OccupancyGrid>(
     "obstacle_map",
     custom_qos2);
-
-  std::string cmd_vel_topic_string = "/base_controller/cmd_vel_unstamped";
-  declareParameter(name_ + "." + "cmd_vel_topic", rclcpp::ParameterValue("/cmd_vel"));
-  node->get_parameter(name_ + "." + "cmd_vel_topic", cmd_vel_topic_string);
-
-  rotate_threshold_ = 0.17;
-  declareParameter(name_ + "." + "rotate_threshold", rclcpp::ParameterValue(0.17));
-  node->get_parameter(name_ + "." + "rotate_threshold", rotate_threshold_);
-
 
   RCLCPP_INFO(logger_, "    GlobalVoxelLayer cmd_vel_topic: %s", cmd_vel_topic_string.c_str());
   RCLCPP_INFO(logger_, "    GlobalVoxelLayer rotate_threshold: %.2f", rotate_threshold_);
@@ -239,7 +241,7 @@ void GlobalVoxelLayer::updateCosts(
   // [sungkyu.kang] publish current master grid
 
   if (last_rotate_vel_ > rotate_threshold_) {
-    RCLCPP_INFO(logger_, "    do not publish obstaclesmap. last_rotate_vel_: %f, rotate_threshold_: %f", last_rotate_vel_, rotate_threshold_);
+    // RCLCPP_INFO(logger_, "    do not publish obstaclesmap. last_rotate_vel_: %f, rotate_threshold_: %f", last_rotate_vel_, rotate_threshold_);
     return;
   }
 
