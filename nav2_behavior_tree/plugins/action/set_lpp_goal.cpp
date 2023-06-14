@@ -63,10 +63,17 @@ inline BT::NodeStatus SetLppGoal::tick()
   bool path_pruning = std::isfinite(max_robot_pose_search_dist);
   nav_msgs::msg::Path new_path;
   getInput("path", new_path);
-  if (!path_pruning || new_path != path_) {
-    path_ = new_path;
-    closest_pose_detection_begin_ = path_.poses.begin();
+
+  if (!new_path.poses.empty()) {
+    if (!path_pruning || new_path != path_) {
+      path_ = new_path;
+    }
+  } else {
+    RCLCPP_INFO(
+      config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+      "SetLppGoal::tick new_path.poses.empty()");
   }
+  closest_pose_detection_begin_ = path_.poses.begin();
 
   if (!getRobotPose(path_.header.frame_id, pose)) {
     return BT::NodeStatus::FAILURE;
@@ -124,6 +131,10 @@ inline BT::NodeStatus SetLppGoal::tick()
 inline bool SetLppGoal::getRobotPose(
   std::string path_frame_id, geometry_msgs::msg::PoseStamped & pose)
 {
+
+  RCLCPP_INFO(
+    config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+    "SetLppGoal::getRobotPose path_frame_id: %s", path_frame_id.c_str());
   if (!getInput("pose", pose)) {
     std::string robot_frame;
     if (!getInput("robot_frame", robot_frame)) {
@@ -132,6 +143,9 @@ inline bool SetLppGoal::getRobotPose(
         "Neither pose nor robot_frame specified for %s", name().c_str());
       return false;
     }
+    RCLCPP_INFO(
+    config().blackboard->get<rclcpp::Node::SharedPtr>("node")->get_logger(),
+    "SetLppGoal::getRobotPose robot_frame: %s", robot_frame.c_str());
     double transform_tolerance;
     getInput("transform_tolerance", transform_tolerance);
     if (!nav2_util::getCurrentPose(
