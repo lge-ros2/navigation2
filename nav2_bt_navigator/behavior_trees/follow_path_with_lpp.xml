@@ -1,6 +1,24 @@
 <?xml version="1.0"?>
 <root main_tree_to_execute="MainTree">
     <!-- ////////// -->
+    <BehaviorTree ID="LppSequenceTree">
+        <Fallback>
+            <Sequence name="SequenceBeforeLpp">
+                <Action ID="Wait" name="WaitBeforeLpp" wait_duration="5"/>
+                <Fallback name="FallbackBeforeLpp">
+                    <Condition ID="GoalUpdated" name="GoalUpdatedBeforeLpp"/>
+                    <Action ID="CheckFrontObstacle" angle="0.66" name="CheckFrontObstacleBeforeLpp" range="1.5" rotate_threshold="0.15"/>
+                </Fallback>
+            </Sequence>
+            <Inverter>
+                <Action ID="RequestTriggerLpp" lpp_duration="{lpp_duration}"/>
+            </Inverter>
+            <RetryUntilSuccessful num_attempts="100">
+                <SubTree ID="NavigateToLppPoseTree" __shared_blackboard="true"/>
+            </RetryUntilSuccessful>
+        </Fallback>
+    </BehaviorTree>
+    <!-- ////////// -->
     <BehaviorTree ID="MainTree">
         <Control ID="RecoveryNode" number_of_retries="10">
             <Sequence>
@@ -15,47 +33,50 @@
                             <Action ID="CheckRobotOrientation" distance_forward="2.0" distance_threshold="1.5" path="{path}" threshold="0.25"/>
                         </Fallback>
                     </Decorator>
-                    <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="general_goal_checker" path="{path}"/>
+                    <Control ID="RecoveryNode" number_of_retries="12">
+                        <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="general_goal_checker" path="{path}"/>
+                        <SubTree ID="RecoveryTree" __shared_blackboard="true"/>
+                    </Control>
                 </Control>
             </Sequence>
-            <SubTree ID="NavigateToLppPose" __shared_blackboard="true"/>
+            <SubTree ID="LppSequenceTree" __shared_blackboard="true"/>
         </Control>
     </BehaviorTree>
     <!-- ////////// -->
-    <BehaviorTree ID="NavigateToLppPose">
-        <Fallback>
-            <Sequence name="SequenceBeforeLpp">
-                <Action ID="Wait" name="WaitBeforeLpp" wait_duration="5"/>
-                <Fallback name="FallbackBeforeLpp">
-                    <Condition ID="GoalUpdated" name="GoalUpdatedBeforeLpp"/>
-                    <Action ID="CheckFrontObstacle" angle="0.66" name="CheckFrontObstacleBeforeLpp" range="1.5" rotate_threshold="0.15"/>
-                </Fallback>
-            </Sequence>
-            <Inverter>
-                <Action ID="RequestTriggerLpp" lpp_duration="{lpp_duration}"/>
-            </Inverter>
-            <RetryUntilSuccessful num_attempts="100">
-                <Sequence>
-                    <Action ID="SetLppGoal" lpp_duration="{lpp_duration}" lpp_goal="{lpp_goal}" path="{path}"/>
-                    <ReactiveFallback>
-                        <Condition ID="GoalUpdated" name="GoalUpdatedWhileLpp"/>
-                        <Timeout msec="{lpp_duration}" name="FollowLPPTimeout">
-                            <Control ID="PipelineSequence">
-                                <Decorator ID="RateController" hz="1.0" name="RateControllerComputeLppPath">
-                                    <Action ID="ComputePathToPose" goal="{lpp_goal}" name="ComputePathToLppGoal" path="{lpp_path}" planner_id="GridBased"/>
-                                </Decorator>
-                                <Control ID="RecoveryNode" number_of_retries="4">
-                                    <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="only_position_checker" name="FollowLppPath" path="{lpp_path}"/>
-                                    <Action ID="Spin" spin_dist="1.57"/>
-                                </Control>
-                            </Control>
-                        </Timeout>
-                        <Action ID="CheckFrontObstacle" angle="0.66" name="CheckFrontObstacleAfterLpp" range="1.5" rotate_threshold="0.15"/>
-                    </ReactiveFallback>
-                    <Action ID="SendLppEnd"/>
+    <BehaviorTree ID="NavigateToLppPoseTree">
+        <Sequence>
+            <Action ID="SetLppGoal" duration_distance_factor="30.0" lpp_duration="{lpp_duration}" lpp_goal="{lpp_goal}" path="{path}"/>
+            <ReactiveFallback>
+                <Condition ID="GoalUpdated" name="GoalUpdatedWhileLpp"/>
+                <Timeout msec="{lpp_duration}" name="FollowLPPTimeout">
+                    <Control ID="PipelineSequence">
+                        <Decorator ID="RateController" hz="1.0" name="RateControllerComputeLppPath">
+                            <Action ID="ComputePathToPose" goal="{lpp_goal}" name="ComputePathToLppGoal" path="{lpp_path}" planner_id="GridBased"/>
+                        </Decorator>
+                        <Control ID="RecoveryNode" number_of_retries="12">
+                            <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="only_position_checker" name="FollowLppPath" path="{lpp_path}"/>
+                            <SubTree ID="RecoveryTree" __shared_blackboard="true"/>
+                        </Control>
+                    </Control>
+                </Timeout>
+                <Action ID="CheckFrontObstacle" angle="0.66" name="CheckFrontObstacleAfterLpp" range="1.5" rotate_threshold="0.15"/>
+            </ReactiveFallback>
+            <Action ID="SendLppEnd"/>
+        </Sequence>
+    </BehaviorTree>
+    <!-- ////////// -->
+    <BehaviorTree ID="RecoveryTree">
+        <ReactiveFallback name="RecoveryReactiveFallback">
+            <Condition ID="GoalUpdated" name="RecoveryGoalUpdated"/>
+            <Control ID="RoundRobin" name="RecoveryRoundRobin">
+                <Sequence name="RecoverySequence">
+                    <Action ID="ClearEntireCostmap" name="RecoveryClearEntireCostmap" service_name="global_costmap/clear_entirely_global_costmap"/>
+                    <Action ID="ClearEntireCostmap" name="RecoveryClearEntireCostmap" service_name="local_costmap/clear_entirely_local_costmap"/>
                 </Sequence>
-            </RetryUntilSuccessful>
-        </Fallback>
+                <Action ID="Spin" name="RecoverySpin" spin_dist="1.57"/>
+                <Action ID="BackUp" backup_dist="0.2" backup_speed="0.1" name="RecoveryBackUp"/>
+            </Control>
+        </ReactiveFallback>
     </BehaviorTree>
     <!-- ////////// -->
     <TreeNodesModel>
@@ -72,9 +93,6 @@
         <Action ID="BackUp">
             <input_port name="backup_dist">Distance to backup</input_port>
             <input_port name="backup_speed">Speed at which to backup</input_port>
-            <input_port name="server_name">Server name</input_port>
-            <input_port name="server_timeout">Server timeout</input_port>
-            <input_port name="time_allowance">Allowed time for reversing</input_port>
         </Action>
         <Action ID="CancelAssistedTeleop">
             <input_port name="server_timeout">Server timeout</input_port>
@@ -189,13 +207,16 @@
             <input_port name="server_timeout"> Server timeout </input_port>
         </Condition>
         <Condition ID="IsStuck"/>
+        <SubTree ID="LppSequenceTree">
+            <input_port default="true" name="__shared_blackboard">If false (default), the Subtree has an isolated blackboard and needs port remapping</input_port>
+        </SubTree>
         <Action ID="NavigateThroughPoses">
             <input_port name="behavior_tree">Behavior tree to run</input_port>
             <input_port name="goals">Goals</input_port>
             <input_port name="server_name">Server name</input_port>
             <input_port name="server_timeout">Server timeout</input_port>
         </Action>
-        <SubTree ID="NavigateToLppPose">
+        <SubTree ID="NavigateToLppPoseTree">
             <input_port default="true" name="__shared_blackboard">If false (default), the Subtree has an isolated blackboard and needs port remapping</input_port>
         </SubTree>
         <Action ID="NavigateToPose">
@@ -225,6 +246,9 @@
         <Control ID="RecoveryNode">
             <input_port name="number_of_retries">Number of retries</input_port>
         </Control>
+        <SubTree ID="RecoveryTree">
+            <input_port default="true" name="__shared_blackboard">If false (default), the Subtree has an isolated blackboard and needs port remapping</input_port>
+        </SubTree>
         <Action ID="ReinitializeGlobalLocalization">
             <input_port name="server_timeout">Server timeout</input_port>
             <input_port name="service_name">Service name</input_port>
@@ -242,6 +266,7 @@
         <Control ID="RoundRobin"/>
         <Action ID="SendLppEnd"/>
         <Action ID="SetLppGoal">
+            <input_port default="30.0" name="duration_distance_factor"/>
             <input_port default="{lpp_duration}" name="lpp_duration"/>
             <output_port default="{lpp_goal}" name="lpp_goal"/>
             <input_port default="{path}" name="path"/>
