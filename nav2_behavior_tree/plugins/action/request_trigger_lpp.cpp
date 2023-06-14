@@ -42,11 +42,15 @@ RequestTriggerLpp::RequestTriggerLpp(
   getInput("status_topic_name", status_topic_name_);
   getInput("trigger_topic_name", trigger_topic_name_);
 
+  RCLCPP_INFO(node_->get_logger(), "RequestTriggerLpp request_topic_name: %s", request_topic_name_.c_str());
+  RCLCPP_INFO(node_->get_logger(), "RequestTriggerLpp status_topic_name: %s", status_topic_name_.c_str());
+  RCLCPP_INFO(node_->get_logger(), "RequestTriggerLpp trigger_topic_name: %s", trigger_topic_name_.c_str());
+
   request_pub_ = node_->create_publisher<std_msgs::msg::String>(request_topic_name_, 5);
   status_pub_ = node_->create_publisher<std_msgs::msg::String>(status_topic_name_, 5);
 
   rclcpp::QoS qos(rclcpp::KeepLast(1));
-  qos.transient_local().reliable();
+  qos.reliable();
 
   rclcpp::SubscriptionOptions sub_option;
   sub_option.callback_group = callback_group_;
@@ -61,7 +65,7 @@ BT::NodeStatus RequestTriggerLpp::tick()
 {
   if (!send_request_) {
     last_trigger_duration_ = 0.0;
-    RCLCPP_INFO(node_->get_logger(), "RequestTriggerLpp send_request_ topic: %s", request_topic_name_.c_str());
+    RCLCPP_INFO(node_->get_logger(), "RequestTriggerLpp send_request");
     auto request_message = std_msgs::msg::String();
     request_message.data = "request";
     request_pub_->publish(request_message);
@@ -80,14 +84,13 @@ BT::NodeStatus RequestTriggerLpp::tick()
   } else {
     // std_msgs::msg::Float32 new_duration;
     // new_duration.data = last_trigger_duration_;
-    RCLCPP_INFO(node_->get_logger(), "RequestTriggerLpp get lpp duration topic: %f", last_trigger_duration_);
-    if (last_trigger_duration_ < 0.0) {
+    RCLCPP_INFO(node_->get_logger(), "RequestTriggerLpp get lpp duration: %.2f", last_trigger_duration_);
+    if (last_trigger_duration_ <= 0.0) {
       last_trigger_duration_ = 0.0;
       send_request_ = false;
       return BT::NodeStatus::FAILURE;
     }
     setOutput("lpp_duration", (unsigned int)(last_trigger_duration_*1000));
-    RCLCPP_INFO(node_->get_logger(), "RequestTriggerLpp lpp_duration: %f", last_trigger_duration_);
     nav_msgs::msg::Path path_;
     geometry_msgs::msg::PoseStamped pose_;
     getInput("path", path_);
@@ -104,6 +107,7 @@ BT::NodeStatus RequestTriggerLpp::tick()
 void
 RequestTriggerLpp::callbackTriggerLpp(const std_msgs::msg::Float32::SharedPtr msg)
 {
+  RCLCPP_INFO(node_->get_logger(), "RequestTriggerLpp callbackTriggerLpp: %.2f", msg->data);
   last_trigger_duration_ = msg->data;
 }
 

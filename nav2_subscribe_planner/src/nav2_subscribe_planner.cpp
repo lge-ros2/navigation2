@@ -81,9 +81,6 @@ SubscribePlanner::configure(
   declare_parameter_if_not_declared(node, name + ".path_pruning", rclcpp::ParameterValue(true));
   node->get_parameter(name + ".path_pruning", path_pruning_);
 
-  declare_parameter_if_not_declared(node, name + ".path_pruning", rclcpp::ParameterValue(true));
-  node->get_parameter(name + ".path_pruning", path_pruning_);
-
   auto callback = [this](const nav_msgs::msg::Path::SharedPtr msg) -> void {
     path_ = *msg;
   };
@@ -124,8 +121,10 @@ nav_msgs::msg::Path SubscribePlanner::createPlan(
   const geometry_msgs::msg::PoseStamped & /* goal */)
 {
 
-  if (path_.poses.empty()) {
-    return path_;
+  while (path_.poses.empty()) {
+    RCLCPP_INFO(
+      logger_, "SubscribePlanner::createPlan path_.poses.empty() wait for plan");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
   double angular_distance_weight = 0.0;
