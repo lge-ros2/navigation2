@@ -69,6 +69,7 @@
         <ReactiveFallback name="RecoveryReactiveFallback">
             <Condition ID="GoalUpdated" name="RecoveryGoalUpdated"/>
             <Control ID="RoundRobin" name="RecoveryRoundRobin">
+                <Action ID="Wait" wait_duration="2"/>
                 <Sequence name="RecoverySequence">
                     <Action ID="ClearEntireCostmap" name="RecoveryClearEntireCostmap" service_name="global_costmap/clear_entirely_global_costmap"/>
                     <Action ID="ClearEntireCostmap" name="RecoveryClearEntireCostmap" service_name="local_costmap/clear_entirely_local_costmap"/>
