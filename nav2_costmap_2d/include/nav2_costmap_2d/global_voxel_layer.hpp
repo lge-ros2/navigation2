@@ -113,24 +113,39 @@ protected:
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
   std::unique_ptr<nav_msgs::msg::OccupancyGrid> grid_;
 
+  double current_robot_x_;
+  double current_robot_y_;
+  double current_robot_yaw_;
+  std::string scan_frame_id_;
+  std::string robot_frame_id_;
   bool is_init_scan_angle_;
   bool use_init_scan_angle_;
   double scan_start_angle_;
   double scan_end_angle_;
   float scan_link_offset_;
-  double current_robot_yaw_;
   double last_rotate_vel_;
   double rotate_threshold_;
   static char * cost_translation_table_;
   rclcpp::Time last_publish_{0, 0, RCL_ROS_TIME};
   rclcpp::Duration publish_cycle_{1, 0};
+  sensor_msgs::msg::LaserScan::ConstSharedPtr last_scan_msg_;
 
 protected:
-  void updateRobotYaw(const double robot_yaw);
+  void updateRobotPose(const double robot_x, const double robot_y, const double robot_yaw);
 
 private:
   void initializeScanAngle(sensor_msgs::msg::LaserScan::ConstSharedPtr message);
   void prepareGrid(nav2_costmap_2d::Costmap2D costmap);
+  std::vector<std::array<int, 2>> bresenham(int s_x, int s_y, int f_x, int f_y, int width, int height);
+  void fillGrid(int s_x, int s_y, int f_x, int f_y, int width, int height, unsigned char * data);
+
+  enum SPIRAL_DIRECTION
+  {
+    RIGHT = 0,
+    DOWN = 1,
+    LEFT = 2,
+    UP = 3
+  };
 };
 
 }  // namespace nav2_costmap_2d
