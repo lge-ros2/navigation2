@@ -7,7 +7,7 @@
                 <Action ID="Wait" name="WaitBeforeLpp" wait_duration="5"/>
                 <Fallback name="FallbackBeforeLpp">
                     <Condition ID="GoalUpdated" name="GoalUpdatedBeforeLpp"/>
-                    <Action ID="CheckFrontObstacle" angle="0.66" name="CheckFrontObstacleBeforeLpp" range="1.5" rotate_threshold="0.15"/>
+                    <Action ID="CheckFrontObstacle" distance_forward="1.5" name="CheckFrontObstacleBeforeLpp" path="{path}"/>
                 </Fallback>
             </Sequence>
             <Inverter>
@@ -28,10 +28,7 @@
                         <Action ID="ComputePathToPose" goal="{goal}" path="{path}" planner_id="TopicBased"/>
                     </Decorator>
                     <Decorator ID="RateController" hz="1.0" name="RateControllerObstacle">
-                        <Fallback>
-                            <Action ID="CheckFrontObstacle" angle="0.2" range="1.5" rotate_threshold="0.15"/>
-                            <Action ID="CheckRobotOrientation" distance_forward="2.0" distance_threshold="1.5" path="{path}" threshold="0.25"/>
-                        </Fallback>
+                        <Action ID="CheckFrontObstacle" distance_forward="1.5" path="{path}"/>
                     </Decorator>
                     <Control ID="RecoveryNode" number_of_retries="12">
                         <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="general_goal_checker" path="{path}"/>
@@ -55,17 +52,30 @@
                         </Decorator>
                         <Control ID="RecoveryNode" number_of_retries="12">
                             <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="only_position_checker" name="FollowLppPath" path="{lpp_path}"/>
-                            <SubTree ID="RecoveryTree" __shared_blackboard="true"/>
+                            <SubTree ID="RecoveryTreeLPP" __shared_blackboard="true"/>
                         </Control>
                     </Control>
                 </Timeout>
-                <Action ID="CheckFrontObstacle" angle="0.66" name="CheckFrontObstacleAfterLpp" range="1.5" rotate_threshold="0.15"/>
+                <Action ID="CheckFrontObstacle" distance_forward="1.5" name="CheckFrontObstacleAfterLpp" path="{path}"/>
             </ReactiveFallback>
             <Action ID="SendLppEnd"/>
         </Sequence>
     </BehaviorTree>
     <!-- ////////// -->
     <BehaviorTree ID="RecoveryTree">
+        <ReactiveFallback name="RecoveryReactiveFallback">
+            <Condition ID="GoalUpdated" name="RecoveryGoalUpdated"/>
+            <Control ID="RoundRobin" name="RecoveryRoundRobin">
+                <Action ID="Wait" wait_duration="2"/>
+                <Sequence name="RecoverySequence">
+                    <Action ID="ClearEntireCostmap" name="RecoveryClearEntireCostmap" service_name="global_costmap/clear_entirely_global_costmap"/>
+                    <Action ID="ClearEntireCostmap" name="RecoveryClearEntireCostmap" service_name="local_costmap/clear_entirely_local_costmap"/>
+                </Sequence>
+            </Control>
+        </ReactiveFallback>
+    </BehaviorTree>
+    <!-- ////////// -->
+    <BehaviorTree ID="RecoveryTreeLPP">
         <ReactiveFallback name="RecoveryReactiveFallback">
             <Condition ID="GoalUpdated" name="RecoveryGoalUpdated"/>
             <Control ID="RoundRobin" name="RecoveryRoundRobin">
@@ -120,9 +130,8 @@
             <input_port name="server_timeout">Server timeout</input_port>
         </Action>
         <Action ID="CheckFrontObstacle">
-            <input_port default="0.4" name="angle"/>
-            <input_port default="2.1" name="range"/>
-            <input_port default="0.5" name="rotate_threshold"/>
+            <input_port default="1.5" name="distance_forward"/>
+            <input_port default="{path}" name="path"/>
         </Action>
         <Action ID="CheckRobotOrientation">
             <input_port default="2.0" name="distance_forward"/>
@@ -249,6 +258,9 @@
         </Control>
         <SubTree ID="RecoveryTree">
             <input_port default="true" name="__shared_blackboard">If false (default), the Subtree has an isolated blackboard and needs port remapping</input_port>
+        </SubTree>
+        <SubTree ID="RecoveryTreeLPP">
+            <inout_port name="__shared_blackboard"/>
         </SubTree>
         <Action ID="ReinitializeGlobalLocalization">
             <input_port name="server_timeout">Server timeout</input_port>
