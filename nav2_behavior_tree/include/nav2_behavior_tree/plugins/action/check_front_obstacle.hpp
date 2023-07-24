@@ -19,12 +19,12 @@
 #include <memory>
 #include <string>
 
-#include "sensor_msgs/msg/laser_scan.hpp"
-#include "geometry_msgs/msg/twist.hpp"
-
 #include "behaviortree_cpp_v3/action_node.h"
+#include "tf2_ros/buffer.h"
 
-#include "rclcpp/rclcpp.hpp"
+#include "nav_msgs/msg/path.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "nav2_msgs/srv/is_path_valid.hpp"
 
 namespace nav2_behavior_tree
 {
@@ -49,18 +49,23 @@ public:
   static BT::PortsList providedPorts()
   {
     return {
-      BT::InputPort<float>(
-        "angle",
-        0.4,
-        "the input angle radian to detect front obstacle"),
-      BT::InputPort<float>(
-        "range",
-        2.0,
-        "the input range meter to detect front obstacle"),
-      BT::InputPort<float>(
-        "rotate_threshold",
-        0.3,
-        "the input threshold rotation velocity to ignore range"),
+      BT::InputPort<nav_msgs::msg::Path>("path", "Original Path"),
+      BT::InputPort<std::string>(
+        "robot_frame", "base_link",
+        "Robot base frame id"),
+      BT::InputPort<double>(
+        "distance_forward", 1.5,
+        "forward distance for check orientation of path"),
+      BT::InputPort<double>(
+        "transform_tolerance", 0.2,
+        "Transform lookup tolerance"),
+      BT::InputPort<geometry_msgs::msg::PoseStamped>(
+        "pose", "Manually specified pose to be used"
+        "if overriding current robot pose"),
+      BT::InputPort<double>(
+        "angular_distance_weight", 0.0,
+        "Weight of angular distance relative to positional distance when finding which path "
+        "pose is closest to robot. Not applicable on paths without orientations assigned"),
     };
   }
 
@@ -71,31 +76,39 @@ private:
   BT::NodeStatus tick() override;
 
   /**
-   * @brief callback function for detecting obstacle
-   *
-   * @param msg the message with the laser scan data
+   * @brief Get either specified input pose or robot pose in path frame
+   * @param path_frame_id Frame ID of path
+   * @param pose Output pose
+   * @return True if succeeded
    */
-  void callbackLaserScan(const sensor_msgs::msg::LaserScan::SharedPtr msg);
-  rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+  bool getRobotPose(std::string path_frame_id, geometry_msgs::msg::PoseStamped & pose);
 
   /**
-   * @brief callback function for check rotation velcity
-   *
-   * @param msg the message with the cmd vel data
+   * @brief A custom pose distance method which takes angular distance into account
+   * in addition to spatial distance (to improve picking a correct pose near cusps and loops)
+   * @param pose1 Distance is computed between this pose and pose2
+   * @param pose2 Distance is computed between this pose and pose1
+   * @param angular_distance_weight Weight of angular distance relative to spatial distance
+   * (1.0 means that 1 radian of angular distance corresponds to 1 meter of spatial distance)
    */
-  void callbackCmdVel(const geometry_msgs::msg::Twist::SharedPtr msg);
-  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
+  static double poseDistance(
+    const geometry_msgs::msg::PoseStamped & pose1,
+    const geometry_msgs::msg::PoseStamped & pose2,
+    const double angular_distance_weight);
+
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+
+  nav_msgs::msg::Path path_;
+  nav_msgs::msg::Path::_poses_type::iterator closest_pose_detection_begin_;
 
   rclcpp::Node::SharedPtr node_;
   rclcpp::CallbackGroup::SharedPtr callback_group_;
   rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
 
-  float angle_;
-  float range_;
-  float rotate_threshold_;
-
-  sensor_msgs::msg::LaserScan::SharedPtr last_scan_msg_;
-  geometry_msgs::msg::Twist::SharedPtr last_cmd_vel_;
+  rclcpp::Client<nav2_msgs::srv::IsPathValid>::SharedPtr client_;
+  // The timeout value while waiting for a responce from the
+  // is path valid service
+  std::chrono::milliseconds server_timeout_;
 };
 
 }  // namespace nav2_behavior_tree
