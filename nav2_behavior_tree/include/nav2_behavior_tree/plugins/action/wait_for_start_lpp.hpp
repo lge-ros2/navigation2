@@ -13,14 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NAV2_BEHAVIOR_TREE__PLUGINS__ACTION__REQUEST_TRIGGER_LPP_NODE_HPP_
-#define NAV2_BEHAVIOR_TREE__PLUGINS__ACTION__REQUEST_TRIGGER_LPP_NODE_HPP_
+#ifndef NAV2_BEHAVIOR_TREE__PLUGINS__ACTION__WAIT_FOR_START_LPP_NODE_HPP_
+#define NAV2_BEHAVIOR_TREE__PLUGINS__ACTION__WAIT_FOR_START_LPP_NODE_HPP_
 
 #include <memory>
 #include <string>
 
 #include "std_msgs/msg/string.hpp"
-#include "std_msgs/msg/float32.hpp"
+#include "std_msgs/msg/bool.hpp"
 
 #include "behaviortree_cpp_v3/action_node.h"
 
@@ -29,7 +29,7 @@
 namespace nav2_behavior_tree
 {
 
-class RequestTriggerLpp : public BT::CoroActionNode
+class WaitForStartLpp : public BT::CoroActionNode
 {
 public:
   /**
@@ -38,7 +38,7 @@ public:
    * @param xml_tag_name Name for the XML tag for this node
    * @param conf  BT node configuration
    */
-  RequestTriggerLpp(
+  WaitForStartLpp(
     const std::string & xml_tag_name,
     const BT::NodeConfiguration & conf);
 
@@ -50,20 +50,13 @@ public:
   {
     return {
       BT::InputPort<std::string>(
-        "request_topic_name",
-        "request_lpp",
-        "the input topic name to request lpp"),
+        "start_topic_name",
+        "start_lpp",
+        "the input topic name to start_lpp lpp"),
       BT::InputPort<std::string>(
         "status_topic_name",
         "lpp_status",
         "the input topic name to publish status"),
-      BT::InputPort<std::string>(
-        "trigger_topic_name",
-        "trigger_lpp",
-        "the input topic name to tigger lpp"),
-      BT::OutputPort<unsigned int>(
-        "lpp_duration",
-        "the output duration to lpp"),
     };
   }
 
@@ -78,25 +71,21 @@ private:
    *
    * @param msg the message with the device_id for trigger lpp
    */
-  void callbackTriggerLpp(const std_msgs::msg::Float32::SharedPtr msg);
+  void callbackStartLpp(const std_msgs::msg::Bool::SharedPtr msg);
 
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr status_pub_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr request_pub_;
-  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr trigger_sub_;
+  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr start_sub_;
 
   rclcpp::Node::SharedPtr node_;
   rclcpp::CallbackGroup::SharedPtr callback_group_;
   rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
 
-  std::string request_topic_name_;
+  int start_flag_;
+  std::string start_topic_name_;
   std::string status_topic_name_;
-  std::string trigger_topic_name_;
-
-  bool send_request_;
-  float last_trigger_duration_;
 
 };
 
 }  // namespace nav2_behavior_tree
 
-#endif  // NAV2_BEHAVIOR_TREE__PLUGINS__ACTION__REQUEST_TRIGGER_LPP_NODE_HPP_
+#endif  // NAV2_BEHAVIOR_TREE__PLUGINS__ACTION__WAIT_FOR_START_LPP_NODE_HPP_
