@@ -74,11 +74,6 @@ BT::NodeStatus RequestTriggerLpp::tick()
 
   callback_group_executor_.spin_some();
 
-  // This behavior always use the last selected planner received from the topic input.
-  // When no input is specified it uses the default planner.
-  // If the default planner is not specified then we work in "required planner mode":
-  // In this mode, the behavior returns failure if the planner selection is not received from
-  // the topic input.
   if (last_trigger_duration_ == 0.0) {
     return BT::NodeStatus::RUNNING;
   } else {
@@ -91,12 +86,9 @@ BT::NodeStatus RequestTriggerLpp::tick()
       return BT::NodeStatus::FAILURE;
     }
     setOutput("lpp_duration", (unsigned int)(last_trigger_duration_*1000));
-    nav_msgs::msg::Path path_;
-    geometry_msgs::msg::PoseStamped pose_;
-    getInput("path", path_);
 
     auto status_message = std_msgs::msg::String();
-    status_message.data = "start";
+    status_message.data = "trigger";
     status_pub_->publish(status_message);
     last_trigger_duration_ = 0.0;
     send_request_ = false;
