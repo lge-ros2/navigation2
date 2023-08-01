@@ -3,13 +3,15 @@
     <!-- ////////// -->
     <BehaviorTree ID="LppSequenceTree">
         <Fallback>
-            <Sequence name="SequenceBeforeLpp">
-                <Action ID="Wait" name="WaitBeforeLpp" wait_duration="5"/>
-                <Fallback name="FallbackBeforeLpp">
-                    <Condition ID="GoalUpdated" name="GoalUpdatedBeforeLpp"/>
-                    <Action ID="CheckFrontObstacle" distance_forward="1.5" name="CheckFrontObstacleBeforeLpp" path="{path}"/>
-                </Fallback>
-            </Sequence>
+            <RetryUntilSuccessful name="CheckBeforeLpp" num_attempts="5">
+                <Sequence name="SequenceBeforeLpp">
+                    <Action ID="Wait" wait_duration="1"/>
+                    <Fallback name="FallbackBeforeLpp">
+                        <Condition ID="GoalUpdated" name="GoalUpdatedBeforeLpp"/>
+                        <Action ID="CheckFrontObstacle" distance_forward="1.5" name="CheckFrontObstacleBeforeLpp" path="{path}"/>
+                    </Fallback>
+                </Sequence>
+            </RetryUntilSuccessful>
             <Inverter>
                 <Action ID="RequestTriggerLpp" lpp_duration="{lpp_duration}"/>
             </Inverter>
@@ -27,7 +29,7 @@
                     <Decorator ID="RateController" hz="1.0">
                         <Action ID="ComputePathToPose" goal="{goal}" path="{path}" planner_id="TopicBased"/>
                     </Decorator>
-                    <Decorator ID="RateController" hz="1.0" name="RateControllerObstacle">
+                    <Decorator ID="RateController" hz="10.0" name="RateControllerObstacle">
                         <Action ID="CheckFrontObstacle" distance_forward="1.5" path="{path}"/>
                     </Decorator>
                     <Control ID="RecoveryNode" number_of_retries="12">
