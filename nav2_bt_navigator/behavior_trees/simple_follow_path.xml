@@ -4,13 +4,20 @@
     <BehaviorTree ID="MainTree">
         <Sequence>
             <Action ID="ClearEntireCostmap" name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
-            <Action ID="ComputePathToPose" goal="{goal}" path="{path}" planner_id="TopicBased"/>
-            <Control ID="RecoveryNode" name="FollowPath" number_of_retries="1000">
-                <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="general_goal_checker" path="{path}"/>
-                <Sequence>
-                    <Action ID="ClearEntireCostmap" name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
-                    <Action ID="Wait" wait_duration="1"/>
-                </Sequence>
+            <Control ID="PipelineSequence">
+                <Decorator ID="RateController" hz="1.0">
+                    <Action ID="ComputePathToPose" goal="{goal}" path="{path}" planner_id="TopicBased"/>
+                </Decorator>
+                <Control ID="RecoveryNode" name="FollowPath" number_of_retries="1000">
+                    <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="general_goal_checker" path="{path}"/>
+                    <ReactiveFallback>
+                        <Condition ID="GoalUpdated"/>
+                        <Sequence>
+                            <Action ID="ClearEntireCostmap" name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
+                            <Action ID="Wait" wait_duration="1"/>
+                        </Sequence>
+                    </ReactiveFallback>
+                </Control>
             </Control>
         </Sequence>
     </BehaviorTree>
@@ -29,6 +36,7 @@
             <input_port default="general_goal_checker" name="goal_checker_id"/>
             <input_port default="{path}" name="path"/>
         </Action>
+        <Condition ID="GoalUpdated"/>
         <Control ID="PipelineSequence"/>
         <Decorator ID="RateController">
             <input_port default="1.0" name="hz"/>
