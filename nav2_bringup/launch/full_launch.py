@@ -44,28 +44,7 @@ def generate_launch_description():
     use_composition = LaunchConfiguration('use_composition')
     use_respawn = LaunchConfiguration('use_respawn')
     rviz_config_file = LaunchConfiguration('rviz_config')
-    log_level = LaunchConfiguration('log_level')
     default_nav_to_pose_bt_xml = LaunchConfiguration('default_nav_to_pose_bt_xml')
-
-    # Map fully qualified names to relative ones so the node's namespace can be prepended.
-    # In case of the transforms (tf), currently, there doesn't seem to be a better alternative
-    # https://github.com/ros/geometry2/issues/32
-    # https://github.com/ros/robot_state_publisher/pull/30
-    # TODO(orduno) Substitute with `PushNodeRemapping`
-    #              https://github.com/ros2/launch_ros/issues/56
-    remappings = [('/tf', 'tf'),
-                  ('/tf_static', 'tf_static')]
-
-    # Create our own temporary YAML files that include substitutions
-    param_substitutions = {
-        'use_sim_time': use_sim_time,
-        'yaml_filename': map_yaml_file}
-
-    configured_params = RewrittenYaml(
-        source_file=params_file,
-        root_key=namespace,
-        param_rewrites=param_substitutions,
-        convert_types=True)
 
     stdout_linebuf_envvar = SetEnvironmentVariable(
         'RCUTILS_LOGGING_BUFFERED_STREAM', '1')
@@ -116,10 +95,6 @@ def generate_launch_description():
         default_value=os.path.join(bringup_dir, 'rviz', 'nav2_default_view.rviz'),
         description='Full path to the RVIZ config file to use')
 
-    declare_log_level_cmd = DeclareLaunchArgument(
-        'log_level', default_value='info',
-        description='log level')
-
     declare_nav_to_pose_bt_xml_cmd = DeclareLaunchArgument(
         'default_nav_to_pose_bt_xml', default_value=os.path.join(bt_navigator_dir, 'behavior_trees', 'navigate_to_pose_w_replanning_and_recovery.xml'),
         description='Whether to respawn if a node crashes. Applied when composition is disabled.')
@@ -164,7 +139,6 @@ def generate_launch_description():
     ld.add_action(declare_use_composition_cmd)
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_rviz_config_file_cmd)
-    ld.add_action(declare_log_level_cmd)
     ld.add_action(declare_nav_to_pose_bt_xml_cmd)
 
     # Add the actions to launch all of the navigation nodes
