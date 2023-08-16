@@ -45,6 +45,7 @@ def generate_launch_description():
     use_respawn = LaunchConfiguration('use_respawn')
     rviz_config_file = LaunchConfiguration('rviz_config')
     default_nav_to_pose_bt_xml = LaunchConfiguration('default_nav_to_pose_bt_xml')
+    use_fixed_rviz_config_file = LaunchConfiguration('use_fixed_rviz_config_file')
 
     stdout_linebuf_envvar = SetEnvironmentVariable(
         'RCUTILS_LOGGING_BUFFERED_STREAM', '1')
@@ -99,6 +100,10 @@ def generate_launch_description():
         'default_nav_to_pose_bt_xml', default_value=os.path.join(bt_navigator_dir, 'behavior_trees', 'navigate_to_pose_w_replanning_and_recovery.xml'),
         description='Whether to respawn if a node crashes. Applied when composition is disabled.')
 
+    declare_use_fixed_rviz_config_file_cmd = DeclareLaunchArgument(
+        'use_fixed_rviz_config_file', default_value='false',
+        description='use fixed rviz config file')
+
     # Specify the actions
     bringup_cmd_group = GroupAction([
         IncludeLaunchDescription(
@@ -119,6 +124,7 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(os.path.join(launch_dir, 'cloi_rviz_launch.py')),
             launch_arguments={'namespace': namespace,
                               'use_namespace': use_namespace,
+                              'use_fixed_rviz_config_file': use_fixed_rviz_config_file,
                               'rviz_config_file': rviz_config_file}.items()),
     ])
 
@@ -140,6 +146,7 @@ def generate_launch_description():
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_rviz_config_file_cmd)
     ld.add_action(declare_nav_to_pose_bt_xml_cmd)
+    ld.add_action(declare_use_fixed_rviz_config_file_cmd)
 
     # Add the actions to launch all of the navigation nodes
     ld.add_action(bringup_cmd_group)

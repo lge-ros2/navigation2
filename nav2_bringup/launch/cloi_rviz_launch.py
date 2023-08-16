@@ -21,7 +21,7 @@ from launch.actions import DeclareLaunchArgument, EmitEvent, RegisterEventHandle
 from launch.conditions import IfCondition, UnlessCondition
 from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from nav2_common.launch import ReplaceString
 
@@ -34,6 +34,7 @@ def generate_launch_description():
     namespace = LaunchConfiguration('namespace')
     use_namespace = LaunchConfiguration('use_namespace')
     rviz_config_file = LaunchConfiguration('rviz_config')
+    use_fixed_rviz_config_file = LaunchConfiguration('use_fixed_rviz_config_file')
 
     # Declare the launch arguments
     declare_namespace_cmd = DeclareLaunchArgument(
@@ -52,6 +53,10 @@ def generate_launch_description():
         default_value=os.path.join(bringup_dir, 'rviz', 'nav2_default_view.rviz'),
         description='Full path to the RVIZ config file to use')
 
+    declare_use_fixed_rviz_config_file_cmd = DeclareLaunchArgument(
+        'use_fixed_rviz_config_file', default_value='false',
+        description='use fixed rviz config file')
+
     # Launch rviz
     start_rviz_cmd = Node(
         condition=UnlessCondition(use_namespace),
@@ -64,8 +69,21 @@ def generate_launch_description():
             source_file=rviz_config_file,
             replacements={'<robot_namespace>': ('/', namespace)})
 
+    start_fixed_rviz_cmd = Node(
+        condition=IfCondition(use_fixed_rviz_config_file),
+        package='rviz2',
+        executable='rviz2',
+        namespace=namespace,
+        arguments=['-d', rviz_config_file],
+        output='screen',
+        remappings=[('/tf', 'tf'),
+                    ('/tf_static', 'tf_static'),
+                    ('/goal_pose', 'goal_pose'),
+                    ('/clicked_point', 'clicked_point'),
+                    ('/initialpose', 'initialpose')])
+
     start_namespaced_rviz_cmd = Node(
-        condition=IfCondition(use_namespace),
+        condition=IfCondition(PythonExpression(['not ', use_fixed_rviz_config_file])),
         package='rviz2',
         executable='rviz2',
         namespace=namespace,
@@ -76,6 +94,7 @@ def generate_launch_description():
                     ('/goal_pose', 'goal_pose'),
                     ('/clicked_point', 'clicked_point'),
                     ('/initialpose', 'initialpose')])
+
 
     exit_event_handler = RegisterEventHandler(
         condition=UnlessCondition(use_namespace),
@@ -96,10 +115,12 @@ def generate_launch_description():
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_use_namespace_cmd)
     ld.add_action(declare_rviz_config_file_cmd)
+    ld.add_action(declare_use_fixed_rviz_config_file_cmd)
 
     # Add any conditioned actions
     ld.add_action(start_rviz_cmd)
     ld.add_action(start_namespaced_rviz_cmd)
+    ld.add_action(start_fixed_rviz_cmd)
 
     # Add other nodes and processes we need
     ld.add_action(exit_event_handler)
