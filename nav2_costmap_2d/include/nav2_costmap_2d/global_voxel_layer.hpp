@@ -125,7 +125,6 @@ protected:
   float scan_link_offset_;
   double last_rotate_vel_;
   double rotate_threshold_;
-  static char * cost_translation_table_;
   rclcpp::Time last_publish_{0, 0, RCL_ROS_TIME};
   rclcpp::Duration publish_cycle_{1, 0};
   sensor_msgs::msg::LaserScan::ConstSharedPtr last_scan_msg_;
@@ -136,7 +135,7 @@ protected:
 private:
   void initializeScanAngle(sensor_msgs::msg::LaserScan::ConstSharedPtr message);
   void prepareGrid(nav2_costmap_2d::Costmap2D costmap);
-  std::vector<std::array<int, 2>> bresenham(int s_x, int s_y, int f_x, int f_y, int width, int height);
+  std::vector<std::array<int, 2>> getBresenhamLine(int s_x, int s_y, int f_x, int f_y, int width, int height);
   void fillGrid(int s_x, int s_y, int f_x, int f_y, int width, int height, unsigned char * data);
 
   enum SPIRAL_DIRECTION

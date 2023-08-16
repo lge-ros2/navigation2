@@ -43,8 +43,6 @@ PLUGINLIB_EXPORT_CLASS(nav2_costmap_2d::GlobalVoxelLayer, nav2_costmap_2d::Layer
 
 namespace nav2_costmap_2d
 {
-char * GlobalVoxelLayer::cost_translation_table_ = NULL;
-
 void GlobalVoxelLayer::onInitialize()
 {
   VoxelLayer::onInitialize();
@@ -131,22 +129,6 @@ void GlobalVoxelLayer::onInitialize()
     cmd_vel_topic_string, rclcpp::SystemDefaultsQoS(),
     std::bind(&GlobalVoxelLayer::cmdVelCallback, this, std::placeholders::_1));
 
-  if (cost_translation_table_ == NULL) {
-    cost_translation_table_ = new char[256];
-
-    // special values:
-    cost_translation_table_[0] = FREE_SPACE;  // NO obstacle
-    cost_translation_table_[253] = FREE_SPACE;  // INSCRIBED obstacle
-    cost_translation_table_[254] = 100;  // LETHAL obstacle
-    cost_translation_table_[255] = -1;  // UNKNOWN
-
-    // regular cost values scale the range 1 to 252 (inclusive) to fit
-    // into 1 to 98 (inclusive).
-    for (int i = 1; i < 253; i++) {
-      // cost_translation_table_[i] = static_cast<char>(1 + (97 * (i - 1)) / 251);
-      cost_translation_table_[i] = FREE_SPACE;
-    }
-  }
   scan_link_offset_ = -999.0;
 }
 
@@ -190,7 +172,6 @@ GlobalVoxelLayer::initializeScanAngle(sensor_msgs::msg::LaserScan::ConstSharedPt
   scan_frame_id_ = message->header.frame_id;
   RCLCPP_INFO(logger_, "    scan_start_angle: %.2f, scan_end_angle_: %.2f, scan_frame_id: %s", scan_start_angle_, scan_end_angle_, scan_frame_id_.c_str());
   is_init_scan_angle_ = true;
-
 
 }
 
@@ -296,13 +277,6 @@ void GlobalVoxelLayer::prepareGrid(nav2_costmap_2d::Costmap2D costmap)
   // costmap original data
   unsigned char * data = costmap.getCharMap();
 
-  // for (unsigned int i = 0; i < grid_->data.size(); i++) {
-  //   grid_->data[i] = cost_translation_table_[data[i]];
-  //   if (data[i] == 100) {
-  //     RCLCPP_INFO(logger_, "          obstacle - idx: %d", i);
-  //   }
-  // }
-
   // [sungkyu.kang] check robot orientation. fill -1 back of robot.
   if (scan_link_offset_ == -999.0) {
     // initialize scan-link_offset
@@ -338,7 +312,7 @@ void GlobalVoxelLayer::prepareGrid(nav2_costmap_2d::Costmap2D costmap)
 
   costmap.worldToMapNoBounds(bf_wx, bf_wy, bf_mx, bf_my);
 
-  auto b_result = bresenham(scan_mx, scan_my, bf_mx, bf_my, grid_width, grid_height);
+  auto b_result = getBresenhamLine(scan_mx, scan_my, bf_mx, bf_my, grid_width, grid_height);
   int start_mx = b_result[b_result.size()-1][0];
   int start_my = b_result[b_result.size()-1][1];
   // RCLCPP_INFO(logger_, "    scan_start_angle: %.2f, start_mx: %d, start_my: %d", scan_start_angle, start_mx, start_my);
@@ -349,7 +323,7 @@ void GlobalVoxelLayer::prepareGrid(nav2_costmap_2d::Costmap2D costmap)
 
   costmap.worldToMapNoBounds(bf_wx, bf_wy, bf_mx, bf_my);
 
-  b_result = bresenham(scan_mx, scan_my, bf_mx, bf_my, grid_width, grid_height);
+  b_result = getBresenhamLine(scan_mx, scan_my, bf_mx, bf_my, grid_width, grid_height);
   int end_mx = b_result[b_result.size()-1][0];
   int end_my = b_result[b_result.size()-1][1];
   // RCLCPP_INFO(logger_, "    scan_end_angle: %.2f, end_mx: %d, end_my: %d", scan_end_angle, end_mx, end_my);
@@ -410,6 +384,7 @@ void GlobalVoxelLayer::prepareGrid(nav2_costmap_2d::Costmap2D costmap)
         break;
     }
   }
+  // fill last line
   fillGrid(scan_mx, scan_my, end_mx, end_my, grid_width, grid_height, data);
 
   // RCLCPP_INFO(logger_, "GlobalVoxelLayer::prepareGrid end");
@@ -417,8 +392,7 @@ void GlobalVoxelLayer::prepareGrid(nav2_costmap_2d::Costmap2D costmap)
 
 void GlobalVoxelLayer::fillGrid(int s_x, int s_y, int f_x, int f_y, int width, int height, unsigned char * data)
 {
-  int OBSTACLE_DATA_VALUE = 254;
-  auto b_result = bresenham(s_x, s_y, f_x, f_y, width, height);
+  auto b_result = getBresenhamLine(s_x, s_y, f_x, f_y, width, height);
   std::vector<std::array<int, 2>>::iterator iter;
   bool is_obstacle = false;
   for (iter = b_result.begin(); iter != b_result.end(); iter++) {
@@ -426,7 +400,7 @@ void GlobalVoxelLayer::fillGrid(int s_x, int s_y, int f_x, int f_y, int width, i
     int y = (*iter)[1];
     int idx = y * width + x;
     // RCLCPP_INFO(logger_, "        x: %d, y: %d, idx: %d, data: %d", x, y, idx, data[idx]);
-    if (data[idx] == OBSTACLE_DATA_VALUE) {
+    if (data[idx] == nav2_costmap_2d::LETHAL_OBSTACLE && !is_obstacle) {
       is_obstacle = true;
       grid_->data[idx] = 100;
       // RCLCPP_INFO(logger_, "          obstacle!!!!");
@@ -438,12 +412,12 @@ void GlobalVoxelLayer::fillGrid(int s_x, int s_y, int f_x, int f_y, int width, i
   }
 }
 
-std::vector<std::array<int, 2>> GlobalVoxelLayer::bresenham(
+std::vector<std::array<int, 2>> GlobalVoxelLayer::getBresenhamLine(
   int s_x, int s_y,
   int f_x, int f_y,
   int width, int height)
 {
-  // RCLCPP_INFO(logger_, "        bresenham s_x: %d, s_y: %d. f_x: %d, f_y: %d", s_x, s_y, f_x, f_y);
+  // RCLCPP_INFO(logger_, "        getBresenhamLine s_x: %d, s_y: %d. f_x: %d, f_y: %d", s_x, s_y, f_x, f_y);
   std::vector<std::array<int, 2>> result;
 
   int x = s_x;
