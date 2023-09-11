@@ -45,7 +45,7 @@ def generate_launch_description():
 
     declare_use_namespace_cmd = DeclareLaunchArgument(
         'use_namespace',
-        default_value='false',
+        default_value='False',
         description='Whether to apply a namespace to the navigation stack')
 
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
@@ -54,7 +54,7 @@ def generate_launch_description():
         description='Full path to the RVIZ config file to use')
 
     declare_use_fixed_rviz_config_file_cmd = DeclareLaunchArgument(
-        'use_fixed_rviz_config_file', default_value='false',
+        'use_fixed_rviz_config_file', default_value='False',
         description='use fixed rviz config file')
 
     # Launch rviz
@@ -117,12 +117,12 @@ def generate_launch_description():
     ld.add_action(declare_rviz_config_file_cmd)
     ld.add_action(declare_use_fixed_rviz_config_file_cmd)
 
-    # Add any conditioned actions
+    # # Add any conditioned actions
     ld.add_action(start_rviz_cmd)
     ld.add_action(start_namespaced_rviz_cmd)
     ld.add_action(start_fixed_rviz_cmd)
 
-    # Add other nodes and processes we need
+    # # Add other nodes and processes we need
     ld.add_action(exit_event_handler)
     ld.add_action(exit_event_handler_namespaced)
 
