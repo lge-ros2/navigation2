@@ -29,6 +29,8 @@
 #include "nav2_util/odometry_utils.hpp"
 #include "behaviortree_cpp_v3/loggers/bt_cout_logger.h"
 
+#include "std_msgs/msg/empty.hpp"
+
 namespace nav2_bt_navigator
 {
 
@@ -68,6 +70,8 @@ public:
    * @param pose Pose received via atopic
    */
   void onGoalPoseReceived(const geometry_msgs::msg::PoseStamped::SharedPtr pose);
+
+  void onGoalCancelReceived(const std_msgs::msg::Empty::SharedPtr empty);
 
   /**
    * @brief Get action name for this navigator
@@ -123,6 +127,7 @@ protected:
   rclcpp::Time start_time_;
 
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
+  rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr cancel_sub_;
   rclcpp_action::Client<ActionT>::SharedPtr self_client_;
 
   std::string goal_blackboard_id_;

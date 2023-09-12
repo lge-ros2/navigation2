@@ -361,6 +361,9 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
   cmd_vel.header = pose.header;
   cmd_vel.twist.linear.x = linear_vel;
   cmd_vel.twist.angular.z = angular_vel;
+  RCLCPP_INFO(
+      logger_,
+      "    RPP::computeVelocityCommands angular_vel: %f", angular_vel);
   return cmd_vel;
 }
 
@@ -393,6 +396,15 @@ void RegulatedPurePursuitController::rotateToHeading(
   const double min_feasible_angular_speed = curr_speed.angular.z - max_angular_accel_ * dt;
   const double max_feasible_angular_speed = curr_speed.angular.z + max_angular_accel_ * dt;
   angular_vel = std::clamp(angular_vel, min_feasible_angular_speed, max_feasible_angular_speed);
+  if (fabs(angle_to_path) < rotate_to_heading_angular_vel_) {
+    // RCLCPP_INFO(
+    //   logger_,
+    //   "      ==== RPP::rotateToHeading angle_to_path: %.2f", fabs(angle_to_path));
+    angular_vel = angular_vel / 2;
+  }
+  // RCLCPP_INFO(
+  //     logger_,
+  //     "      ---- RPP::rotateToHeading angular_vel: %f", angular_vel);
 }
 
 geometry_msgs::msg::Point RegulatedPurePursuitController::circleSegmentIntersection(

@@ -52,6 +52,11 @@ NavigateToPoseNavigator::configure(
     rclcpp::SystemDefaultsQoS(),
     std::bind(&NavigateToPoseNavigator::onGoalPoseReceived, this, std::placeholders::_1));
 
+  cancel_sub_ = node->create_subscription<std_msgs::msg::Empty>(
+    "cancel_goal",
+    rclcpp::SystemDefaultsQoS(),
+    std::bind(&NavigateToPoseNavigator::onGoalCancelReceived, this, std::placeholders::_1));
+
   if (!node->has_parameter("cout_bt_logger")) {
     node->declare_parameter("cout_bt_logger", false);
   }
@@ -249,6 +254,12 @@ NavigateToPoseNavigator::onGoalPoseReceived(const geometry_msgs::msg::PoseStampe
   ActionT::Goal goal;
   goal.pose = *pose;
   self_client_->async_send_goal(goal);
+}
+
+void
+NavigateToPoseNavigator::onGoalCancelReceived(const std_msgs::msg::Empty::SharedPtr /* empty */)
+{
+  self_client_->async_cancel_all_goals();
 }
 
 }  // namespace nav2_bt_navigator
