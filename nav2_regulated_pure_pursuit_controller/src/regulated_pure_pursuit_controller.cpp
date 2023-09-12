@@ -393,15 +393,24 @@ void RegulatedPurePursuitController::rotateToHeading(
   angular_vel = sign * rotate_to_heading_angular_vel_;
 
   const double & dt = control_duration_;
-  const double min_feasible_angular_speed = curr_speed.angular.z - max_angular_accel_ * dt;
-  const double max_feasible_angular_speed = curr_speed.angular.z + max_angular_accel_ * dt;
+  double temp_min_feasible_angular_speed = curr_speed.angular.z - max_angular_accel_ * dt;
+  double temp_max_feasible_angular_speed = curr_speed.angular.z + max_angular_accel_ * dt;
+  // if (fabs(angle_to_path) < rotate_to_heading_angular_vel_) {
+  //   RCLCPP_INFO(
+  //     logger_,
+  //     "      ==== RPP::rotateToHeading angle_to_path: %.2f, vel: %.2f", fabs(angle_to_path), rotate_to_heading_angular_vel_);
+  //   RCLCPP_INFO(
+  //     logger_,
+  //     "          min: %.2f, max: %.2f", temp_min_feasible_angular_speed, temp_max_feasible_angular_speed);
+  //   temp_min_feasible_angular_speed = sign * rotate_to_heading_angular_vel_ / 2;
+  //   temp_max_feasible_angular_speed = sign * rotate_to_heading_angular_vel_ / 2;
+  //   // RCLCPP_INFO(
+  //   //   logger_,
+  //   //   "          min: %.2f, max: %.2f", temp_min_feasible_angular_speed, temp_max_feasible_angular_speed);
+  // }
+  const double min_feasible_angular_speed = temp_min_feasible_angular_speed;
+  const double max_feasible_angular_speed = temp_max_feasible_angular_speed;
   angular_vel = std::clamp(angular_vel, min_feasible_angular_speed, max_feasible_angular_speed);
-  if (fabs(angle_to_path) < rotate_to_heading_angular_vel_) {
-    // RCLCPP_INFO(
-    //   logger_,
-    //   "      ==== RPP::rotateToHeading angle_to_path: %.2f", fabs(angle_to_path));
-    angular_vel = angular_vel / 2;
-  }
   // RCLCPP_INFO(
   //     logger_,
   //     "      ---- RPP::rotateToHeading angular_vel: %f", angular_vel);
