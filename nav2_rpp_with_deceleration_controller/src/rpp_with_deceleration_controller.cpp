@@ -133,13 +133,10 @@ void RPPWithDecelerationController::rotateToHeadingWithDeceleration(
   angular_vel = sign * rotate_to_heading_angular_vel_;
 
   const double & dt = control_duration_;
-  double min_feasible_angular_speed = curr_speed.angular.z - max_angular_accel_ * dt;
-  double max_feasible_angular_speed = curr_speed.angular.z + max_angular_accel_ * dt;
-
-  min_feasible_angular_speed = sign * min_angular_velocity_;
-  max_feasible_angular_speed = curr_speed.angular.z - sign * max_angular_decel_ * dt;
+  double min_feasible_angular_speed = sign * min_angular_velocity_;
+  double max_feasible_angular_speed = curr_speed.angular.z - sign * max_angular_decel_ * dt;
   if (min_feasible_angular_speed < max_feasible_angular_speed) {
-    if (sign == -1) {
+    if (sign == -1.0) {
       max_feasible_angular_speed = min_feasible_angular_speed;
     }
     // RCLCPP_INFO(logger_,"              curr: %.2f, min: %.2f, max: %.2f, sign: %.2f", curr_speed.angular.z, min_feasible_angular_speed, max_feasible_angular_speed, sign);
