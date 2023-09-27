@@ -69,6 +69,12 @@ public:
   void onGoalPoseReceived(const geometry_msgs::msg::PoseStamped::SharedPtr pose);
 
   /**
+   * @brief A subscription and callback to handle the topic-based goal-cancel published
+   * @param empty nothing
+   */
+  void onGoalCancelReceived(const std_msgs::msg::Empty::SharedPtr empty);
+
+  /**
    * @brief Get action name for this navigator
    * @return string Name of action server
    */
@@ -122,6 +128,7 @@ protected:
   rclcpp::Time start_time_;
 
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
+  rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr cancel_sub_;
   rclcpp_action::Client<ActionT>::SharedPtr self_client_;
 
   std::string goal_blackboard_id_;
