@@ -207,6 +207,21 @@ list(APPEND plugin_libs nav2_compute_and_track_route_bt_node)
 add_library(nav2_compute_route_bt_node SHARED plugins/action/compute_route_action.cpp)
 list(APPEND plugin_libs nav2_compute_route_bt_node)
 
+add_library(nav2_request_trigger_lpp_bt_node SHARED plugins/action/request_trigger_lpp.cpp)
+list(APPEND plugin_libs nav2_request_trigger_lpp_bt_node)
+
+add_library(nav2_check_front_obstacle_bt_node SHARED plugins/action/check_front_obstacle.cpp)
+list(APPEND plugin_libs nav2_check_front_obstacle_bt_node)
+
+add_library(nav2_set_lpp_goal_bt_node SHARED plugins/action/set_lpp_goal.cpp)
+list(APPEND plugin_libs nav2_set_lpp_goal_bt_node)
+
+add_library(nav2_send_lpp_end_bt_node SHARED plugins/action/send_lpp_end.cpp)
+list(APPEND plugin_libs nav2_send_lpp_end_bt_node)
+
+add_library(nav2_wait_for_start_lpp_bt_node SHARED plugins/action/wait_for_start_lpp.cpp)
+list(APPEND plugin_libs nav2_wait_for_start_lpp_bt_node)
+
 foreach(bt_plugin ${plugin_libs})
   ament_target_dependencies(${bt_plugin} ${dependencies})
   target_compile_definitions(${bt_plugin} PRIVATE BT_PLUGIN_EXPORT)
