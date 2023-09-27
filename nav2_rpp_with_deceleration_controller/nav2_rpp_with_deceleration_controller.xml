@@ -1,0 +1,10 @@
+<class_libraries>
+    <library path="nav2_rpp_with_deceleration_controller">
+        <class type="nav2_rpp_with_deceleration_controller::RPPWithDecelerationController" base_class_type="nav2_core::Controller">
+            <description>
+                nav2_rpp_with_deceleration_controller
+            </description>
+        </class>
+    </library>
+</class_libraries>
+
