@@ -88,6 +88,12 @@ NavigateToPoseNavigator::goalReceived(ActionT::Goal::ConstSharedPtr goal)
 {
   auto bt_xml_filename = goal->behavior_tree;
 
+  if (bt_xml_filename == "from_rviz") {
+    std::string pkg_share_dir =
+      ament_index_cpp::get_package_share_directory("nav2_bt_navigator");
+    bt_xml_filename = pkg_share_dir + "/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml";
+  }
+
   if (!bt_action_server_->loadBehaviorTree(bt_xml_filename)) {
     RCLCPP_ERROR(
       logger_, "BT file not found: %s. Navigation canceled.",
