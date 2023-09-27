@@ -51,6 +51,12 @@ NavigateToPoseNavigator::configure(
     "goal_pose",
     rclcpp::SystemDefaultsQoS(),
     std::bind(&NavigateToPoseNavigator::onGoalPoseReceived, this, std::placeholders::_1));
+
+  cancel_sub_ = node->create_subscription<std_msgs::msg::Empty>(
+    "cancel_goal",
+    rclcpp::SystemDefaultsQoS(),
+    std::bind(&NavigateToPoseNavigator::onGoalCancelReceived, this, std::placeholders::_1));
+
   return true;
 }
 
@@ -238,4 +244,9 @@ NavigateToPoseNavigator::onGoalPoseReceived(const geometry_msgs::msg::PoseStampe
   self_client_->async_send_goal(goal);
 }
 
+void
+NavigateToPoseNavigator::onGoalCancelReceived(const std_msgs::msg::Empty::SharedPtr /* empty */)
+{
+  self_client_->async_cancel_all_goals();
+}
 }  // namespace nav2_bt_navigator
