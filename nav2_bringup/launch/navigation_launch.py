@@ -29,6 +29,7 @@ from nav2_common.launch import RewrittenYaml
 def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory('nav2_bringup')
+    bt_navigator_dir = get_package_share_directory('nav2_bt_navigator')
 
     namespace = LaunchConfiguration('namespace')
     use_sim_time = LaunchConfiguration('use_sim_time')
@@ -39,6 +40,7 @@ def generate_launch_description():
     container_name_full = (namespace, '/', container_name)
     use_respawn = LaunchConfiguration('use_respawn')
     log_level = LaunchConfiguration('log_level')
+    default_nav_to_pose_bt_xml = LaunchConfiguration('default_nav_to_pose_bt_xml')
 
     lifecycle_nodes = ['controller_server',
                        'smoother_server',
@@ -60,7 +62,8 @@ def generate_launch_description():
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {
         'use_sim_time': use_sim_time,
-        'autostart': autostart}
+        'autostart': autostart,
+        'default_nav_to_pose_bt_xml': default_nav_to_pose_bt_xml}
 
     configured_params = ParameterFile(
         RewrittenYaml(
@@ -107,6 +110,10 @@ def generate_launch_description():
     declare_log_level_cmd = DeclareLaunchArgument(
         'log_level', default_value='info',
         description='log level')
+
+    declare_nav_to_pose_bt_xml_cmd = DeclareLaunchArgument(
+        'default_nav_to_pose_bt_xml', default_value=os.path.join(bt_navigator_dir, 'behavior_trees', 'follow_path_with_lpp.xml'),
+        description='Whether to respawn if a node crashes. Applied when composition is disabled.')
 
     load_nodes = GroupAction(
         condition=IfCondition(PythonExpression(['not ', use_composition])),
@@ -265,6 +272,7 @@ def generate_launch_description():
     ld.add_action(declare_container_name_cmd)
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
+    ld.add_action(declare_nav_to_pose_bt_xml_cmd)
     # Add the actions to launch all of the navigation nodes
     ld.add_action(load_nodes)
     ld.add_action(load_composable_nodes)
