@@ -778,6 +778,7 @@ Nav2Panel::startNavigation(geometry_msgs::msg::PoseStamped pose)
 
   // Send the goal pose
   navigation_goal_.pose = pose;
+  navigation_goal_.behavior_tree = "from_rviz";
 
   RCLCPP_INFO(
     client_node_->get_logger(),
