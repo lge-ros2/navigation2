@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<root main_tree_to_execute="MainTree">
+    <!-- ////////// -->
+    <BehaviorTree ID="MainTree">
+        <Sequence>
+            <Action ID="ClearEntireCostmap" name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <Control ID="PipelineSequence">
+                <Decorator ID="RateController" hz="1.0">
+                    <Action ID="ComputePathToPose" goal="{goal}" path="{path}" planner_id="TopicBased"/>
+                </Decorator>
+                <Control ID="RecoveryNode" name="FollowPath" number_of_retries="1000">
+                    <Action ID="FollowPath" controller_id="FollowPath" goal_checker_id="general_goal_checker" path="{path}"/>
+                    <ReactiveFallback>
+                        <Condition ID="GoalUpdated"/>
+                        <Sequence>
+                            <Action ID="ClearEntireCostmap" name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
+                            <Action ID="Wait" wait_duration="1"/>
+                        </Sequence>
+                    </ReactiveFallback>
+                </Control>
+            </Control>
+        </Sequence>
+    </BehaviorTree>
+    <!-- ////////// -->
+    <TreeNodesModel>
+        <Action ID="ClearEntireCostmap">
+            <input_port default="&quot;local_costmap/clear_entirely_local_costmap&quot;" name="service_name"/>
+        </Action>
+        <Action ID="ComputePathToPose">
+            <input_port default="{goal}" name="goal"/>
+            <output_port default="{path}" name="path"/>
+            <input_port default="&quot;TopicBased&quot;" name="planner_id"/>
+        </Action>
+        <Action ID="FollowPath">
+            <input_port default="FollowPath" name="controller_id"/>
+            <input_port default="general_goal_checker" name="goal_checker_id"/>
+            <input_port default="{path}" name="path"/>
+        </Action>
+        <Condition ID="GoalUpdated"/>
+        <Control ID="PipelineSequence"/>
+        <Decorator ID="RateController">
+            <input_port default="1.0" name="hz"/>
+        </Decorator>
+        <Control ID="RecoveryNode">
+            <input_port default="10" name="number_of_retries"/>
+        </Control>
+        <Action ID="Wait">
+            <input_port default="1" name="wait_duration"/>
+        </Action>
+    </TreeNodesModel>
+    <!-- ////////// -->
+</root>
